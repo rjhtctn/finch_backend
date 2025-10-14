@@ -1,6 +1,6 @@
 package com.rjhtctn.finch_backend.controller;
 
-import com.rjhtctn.finch_backend.dto.follow.FollowRequest;
+import com.rjhtctn.finch_backend.dto.follow.FollowRequestDto;
 import com.rjhtctn.finch_backend.service.FollowService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -19,7 +19,7 @@ public class FollowController {
 
     @PostMapping
     public ResponseEntity<String> followUser(
-            @RequestBody FollowRequest request,
+            @RequestBody FollowRequestDto request,
             @AuthenticationPrincipal UserDetails userDetails) {
 
         followService.followUser(request.getUsername(), userDetails);

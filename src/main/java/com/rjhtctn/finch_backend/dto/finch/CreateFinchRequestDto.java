@@ -3,6 +3,6 @@ package com.rjhtctn.finch_backend.dto.finch;
 import lombok.Data;
 
 @Data
-public class UpdateFinchRequest {
+public class CreateFinchRequestDto {
     private String content;
 }

@@ -1,16 +1,16 @@
 package com.rjhtctn.finch_backend.mapper;
 
-import com.rjhtctn.finch_backend.dto.finch.FinchResponse;
+import com.rjhtctn.finch_backend.dto.finch.FinchResponseDto;
 import com.rjhtctn.finch_backend.model.Finch;
 
 public class FinchMapper {
 
-    public static FinchResponse toFinchResponse(Finch finch) {
+    public static FinchResponseDto toFinchResponse(Finch finch) {
         if (finch == null) {
             return null;
         }
 
-        FinchResponse dto = new FinchResponse();
+        FinchResponseDto dto = new FinchResponseDto();
         dto.setId(finch.getId());
         dto.setContent(finch.getContent());
         dto.setCreatedAt(finch.getCreatedAt());

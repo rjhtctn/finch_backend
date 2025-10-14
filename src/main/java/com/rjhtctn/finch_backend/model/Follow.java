@@ -1,12 +1,14 @@
 package com.rjhtctn.finch_backend.model;
 
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(exclude = {"follower", "following"})
+@ToString(exclude = {"follower", "following"})
 @NoArgsConstructor
 @Entity
 @Table(uniqueConstraints = {

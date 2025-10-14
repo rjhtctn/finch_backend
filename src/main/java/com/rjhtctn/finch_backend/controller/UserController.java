@@ -1,7 +1,6 @@
 package com.rjhtctn.finch_backend.controller;
 
-import com.rjhtctn.finch_backend.dto.auth.LoginResponse;
-import com.rjhtctn.finch_backend.dto.finch.FinchResponse;
+import com.rjhtctn.finch_backend.dto.finch.FinchResponseDto;
 import com.rjhtctn.finch_backend.dto.user.*;
 import com.rjhtctn.finch_backend.service.UserService;
 import jakarta.validation.Valid;
@@ -22,23 +21,23 @@ public class UserController {
     }
 
     @GetMapping("/{username}")
-    public ResponseEntity<UserProfileResponse> getUserProfileByUsername(@PathVariable String username) {
-        UserProfileResponse userProfile = userService.getOneUser(username);
+    public ResponseEntity<UserProfileResponseDto> getUserProfileByUsername(@PathVariable String username) {
+        UserProfileResponseDto userProfile = userService.getOneUser(username);
         return ResponseEntity.ok(userProfile);
     }
 
     @GetMapping
-    public ResponseEntity<List<UserResponse>> getAllUsers() {
-        List<UserResponse> users = userService.getAllUsers();
+    public ResponseEntity<List<UserResponseDto>> getAllUsers() {
+        List<UserResponseDto> users = userService.getAllUsers();
         return ResponseEntity.ok(users);
     }
 
     @PutMapping("/me")
-    public ResponseEntity<UserMeResponse> updateUserProfile(
-            @RequestBody UpdateUserProfileRequest request,
+    public ResponseEntity<UserMeResponseDto> updateUserProfile(
+            @RequestBody UpdateUserProfileRequestDto request,
             @AuthenticationPrincipal UserDetails userDetails) {
 
-        UserMeResponse updatedUser = userService.updateUserProfile(userDetails.getUsername(), request);
+        UserMeResponseDto updatedUser = userService.updateUserProfile(userDetails.getUsername(), request);
         return ResponseEntity.ok(updatedUser);
     }
 
@@ -49,8 +48,8 @@ public class UserController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<UserMeResponse> getMyProfile(@AuthenticationPrincipal UserDetails userDetails) {
-        UserMeResponse myProfile = userService.getMyProfile(userDetails);
+    public ResponseEntity<UserMeResponseDto> getMyProfile(@AuthenticationPrincipal UserDetails userDetails) {
+        UserMeResponseDto myProfile = userService.getMyProfile(userDetails);
 
         return ResponseEntity.ok(myProfile);
     }
@@ -65,36 +64,36 @@ public class UserController {
     }
 
     @GetMapping("/{username}/finch")
-    public ResponseEntity<List<FinchResponse>> getFinchesOfUser(@PathVariable String username) {
-        List<FinchResponse> finches = userService.getFinchesOfUser(username);
+    public ResponseEntity<List<FinchResponseDto>> getFinchesOfUser(@PathVariable String username) {
+        List<FinchResponseDto> finches = userService.getFinchesOfUser(username);
         return ResponseEntity.ok(finches);
     }
 
     @GetMapping("/{username}/followers")
-    public ResponseEntity<List<UserResponse>> getFollowers(@PathVariable String username) {
+    public ResponseEntity<List<UserResponseDto>> getFollowers(@PathVariable String username) {
         return ResponseEntity.ok(userService.getFollowers(username));
     }
 
     @GetMapping("/{username}/following")
-    public ResponseEntity<List<UserResponse>> getFollowing(@PathVariable String username) {
+    public ResponseEntity<List<UserResponseDto>> getFollowing(@PathVariable String username) {
         return ResponseEntity.ok(userService.getFollowing(username));
     }
 
     @GetMapping("/me/followers")
-    public ResponseEntity<List<UserResponse>> getMyFollowers(@AuthenticationPrincipal UserDetails userDetails) {
-        List<UserResponse> followers = userService.getMyFollowers(userDetails);
+    public ResponseEntity<List<UserResponseDto>> getMyFollowers(@AuthenticationPrincipal UserDetails userDetails) {
+        List<UserResponseDto> followers = userService.getMyFollowers(userDetails);
         return ResponseEntity.ok(followers);
     }
 
     @GetMapping("/me/following")
-    public ResponseEntity<List<UserResponse>> getMyFollowing(@AuthenticationPrincipal UserDetails userDetails) {
-        List<UserResponse> following = userService.getMyFollowing(userDetails);
+    public ResponseEntity<List<UserResponseDto>> getMyFollowing(@AuthenticationPrincipal UserDetails userDetails) {
+        List<UserResponseDto> following = userService.getMyFollowing(userDetails);
         return ResponseEntity.ok(following);
     }
 
     @GetMapping("/me/liked_finches")
-    public ResponseEntity<List<FinchResponse>> getLikedFinches(@AuthenticationPrincipal UserDetails userDetails) {
-        List<FinchResponse> likedFinches = userService.getMyLikedFinches(userDetails);
+    public ResponseEntity<List<FinchResponseDto>> getLikedFinches(@AuthenticationPrincipal UserDetails userDetails) {
+        List<FinchResponseDto> likedFinches = userService.getMyLikedFinches(userDetails);
         return ResponseEntity.ok(likedFinches);
     }
 }

@@ -1,9 +1,9 @@
 package com.rjhtctn.finch_backend.service;
 
-import com.rjhtctn.finch_backend.dto.finch.CreateFinchRequest;
-import com.rjhtctn.finch_backend.dto.finch.FinchResponse;
-import com.rjhtctn.finch_backend.dto.finch.UpdateFinchRequest;
-import com.rjhtctn.finch_backend.dto.user.UserResponse;
+import com.rjhtctn.finch_backend.dto.finch.CreateFinchRequestDto;
+import com.rjhtctn.finch_backend.dto.finch.FinchResponseDto;
+import com.rjhtctn.finch_backend.dto.finch.UpdateFinchRequestDto;
+import com.rjhtctn.finch_backend.dto.user.UserResponseDto;
 import com.rjhtctn.finch_backend.exception.ResourceNotFoundException;
 import com.rjhtctn.finch_backend.mapper.FinchMapper;
 import com.rjhtctn.finch_backend.mapper.UserMapper;
@@ -34,12 +34,12 @@ public class FinchService {
         this.likeService = likeService;
     }
 
-    public FinchResponse createFinch(CreateFinchRequest createFinchRequest, UserDetails userDetails) {
+    public FinchResponseDto createFinch(CreateFinchRequestDto createFinchRequestDto, UserDetails userDetails) {
         String username = userDetails.getUsername();
         User author = userService.findUserByUsername(username);
 
         Finch newFinch = new Finch();
-        newFinch.setContent(createFinchRequest.getContent());
+        newFinch.setContent(createFinchRequestDto.getContent());
         newFinch.setUser(author);
 
         Finch savedFinch = finchRepository.save(newFinch);
@@ -62,7 +62,7 @@ public class FinchService {
         finchRepository.delete(finchToDelete);
     }
 
-    public FinchResponse updateFinch(UUID finchId, UpdateFinchRequest request, UserDetails userDetails) {
+    public FinchResponseDto updateFinch(UUID finchId, UpdateFinchRequestDto request, UserDetails userDetails) {
         Finch finchToUpdate = finchRepository.findById(finchId)
                 .orElseThrow(() -> new ResourceNotFoundException("Finch not found with id: " + finchId));
 
@@ -79,7 +79,7 @@ public class FinchService {
         return FinchMapper.toFinchResponse(updatedFinch);
     }
 
-    public List<FinchResponse> getAllFinches() {
+    public List<FinchResponseDto> getAllFinches() {
         List<Finch> finches = finchRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
 
         return finches.stream()
@@ -92,12 +92,12 @@ public class FinchService {
                 .orElseThrow(() -> new ResourceNotFoundException("Finch not found with id: " + finchId));
     }
 
-    public FinchResponse getFinchById(UUID finchId) {
+    public FinchResponseDto getFinchById(UUID finchId) {
         Finch finch = findFinchById(finchId);
         return mapToFinchResponse(finch);
     }
 
-    public List<FinchResponse> getFinchesByUsername(String username) {
+    public List<FinchResponseDto> getFinchesByUsername(String username) {
         List<Finch> finches = finchRepository.findByUser_Username(username, Sort.by(Sort.Direction.DESC, "createdAt"));
 
         return finches.stream()
@@ -105,7 +105,7 @@ public class FinchService {
                 .collect(Collectors.toList());
     }
 
-    public List<FinchResponse> getLikedFinchesByUser(User user) {
+    public List<FinchResponseDto> getLikedFinchesByUser(User user) {
         List<Finch> likedFinches = likeService.getLikedFinchesForUser(user);
 
         return likedFinches.stream()
@@ -113,16 +113,16 @@ public class FinchService {
                 .collect(Collectors.toList());
     }
 
-    private FinchResponse mapToFinchResponse(Finch finch) {
+    private FinchResponseDto mapToFinchResponse(Finch finch) {
         int likeCount = likeService.getLikeCountForFinch(finch);
 
         List<User> likedUsers = likeService.getUsersForLikedFinch(finch);
 
-        FinchResponse response = FinchMapper.toFinchResponse(finch);
+        FinchResponseDto response = FinchMapper.toFinchResponse(finch);
 
         response.setLikeCount(likeCount);
 
-        List<UserResponse> likedUsersDto = likedUsers.stream()
+        List<UserResponseDto> likedUsersDto = likedUsers.stream()
                         .map(UserMapper::toUserResponse)
                 .collect(Collectors.toList());
         response.setLikedUsers(likedUsersDto);

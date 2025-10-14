@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 @Data
-public class ResendTokenRequest {
+public class ResendTokenRequestDto {
 
     @NotBlank(message = "Email cannot be blank")
     @Email(message = "Please provide a valid email address")

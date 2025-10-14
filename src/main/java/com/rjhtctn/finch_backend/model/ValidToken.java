@@ -1,10 +1,12 @@
 package com.rjhtctn.finch_backend.model;
 
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(exclude = "user")
+@ToString(exclude = "user")
 @NoArgsConstructor
 @Entity
 public class ValidToken {
@@ -13,7 +15,7 @@ public class ValidToken {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 100)
+    @Column(nullable = false, unique = true, length = 255)
     private String jwtId;
 
     @ManyToOne(fetch = FetchType.LAZY)

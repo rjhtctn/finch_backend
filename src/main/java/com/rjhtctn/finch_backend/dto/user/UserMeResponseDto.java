@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Data
-public class UserMeResponse {
+public class UserMeResponseDto {
     private UUID id;
     private String username;
     private String firstName;

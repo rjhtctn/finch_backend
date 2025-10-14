@@ -43,4 +43,23 @@ public class MailService {
             };
             mailSender.send(mailMessage);
     }
+
+    public void sendPasswordResetEmail(User user, String token) {
+        String recipientAddress = user.getEmail();
+        String subject = "Finch - Şifrenizi Sıfırlayın";
+        String confirmationUrl = String.format("%s/api/auth/reset-password?token=%s", frontendUrl, token);
+        String message = """
+                            <p>Finch hesabınızın şifresini sıfırlamak için aşağıdaki bağlantıya tıklayın:</p>
+                            <a href="%s">Şifre Sıfırla</a>
+                            """.formatted(confirmationUrl);
+
+        MimeMessagePreparator mailMessage = mimeMessage -> {
+            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, "UTF-8");
+            helper.setTo(recipientAddress);
+            helper.setSubject(subject);
+            helper.setText(message, true);
+            helper.setFrom(fromEmail, senderName);
+        };
+        mailSender.send(mailMessage);
+    }
 }

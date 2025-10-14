@@ -1,6 +1,6 @@
 package com.rjhtctn.finch_backend.service;
 
-import com.rjhtctn.finch_backend.dto.finch.FinchResponse;
+import com.rjhtctn.finch_backend.dto.finch.FinchResponseDto;
 import com.rjhtctn.finch_backend.dto.user.*;
 import com.rjhtctn.finch_backend.exception.ResourceNotFoundException;
 import com.rjhtctn.finch_backend.mapper.UserMapper;
@@ -42,19 +42,19 @@ public class UserService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with username: " + username));
     }
 
-    public List<UserResponse> getAllUsers() {
+    public List<UserResponseDto> getAllUsers() {
         List<User> users = userRepository.findAll();
         return users.stream()
                 .map(UserMapper::toUserResponse)
                 .collect(Collectors.toList());
     }
 
-    public UserProfileResponse getOneUser(String username) {
+    public UserProfileResponseDto getOneUser(String username) {
         User user = findUserByUsername(username);
         return UserMapper.toUserProfileResponse(user);
     }
 
-    public UserMeResponse updateUserProfile(String username, UpdateUserProfileRequest request) {
+    public UserMeResponseDto updateUserProfile(String username, UpdateUserProfileRequestDto request) {
         User userToUpdate = findUserByUsername(username);
         UserMapper.updateUserFromDto(userToUpdate, request);
         User updatedUser = userRepository.save(userToUpdate);
@@ -81,43 +81,43 @@ public class UserService {
         userRepository.delete(userToDelete);
     }
 
-    public UserMeResponse getMyProfile(UserDetails userDetails) {
+    public UserMeResponseDto getMyProfile(UserDetails userDetails) {
         User user =  findUserByUsername(userDetails.getUsername());
 
         return UserMapper.toUserMeResponse(user);
     }
 
-    public List<FinchResponse> getFinchesOfUser(String username) {
+    public List<FinchResponseDto> getFinchesOfUser(String username) {
         findUserByUsername(username);
 
         return finchService.getFinchesByUsername(username);
     }
 
-    public List<UserResponse> getFollowers(String username) {
+    public List<UserResponseDto> getFollowers(String username) {
         User user = findUserByUsername(username);
 
         return followService.getFollowers(user);
     }
 
-    public List<UserResponse> getFollowing(String username) {
+    public List<UserResponseDto> getFollowing(String username) {
         User user = findUserByUsername(username);
         return followService.getFollowing(user);
     }
 
-    public List<UserResponse> getMyFollowers(UserDetails userDetails) {
+    public List<UserResponseDto> getMyFollowers(UserDetails userDetails) {
         return getFollowers(userDetails.getUsername());
     }
 
-    public List<UserResponse> getMyFollowing(UserDetails userDetails) {
+    public List<UserResponseDto> getMyFollowing(UserDetails userDetails) {
         return getFollowing(userDetails.getUsername());
     }
 
-    public List<FinchResponse> getLikedFinchesByUsername(String username) {
+    public List<FinchResponseDto> getLikedFinchesByUsername(String username) {
         User user = findUserByUsername(username);
         return finchService.getLikedFinchesByUser(user);
     }
 
-    public List<FinchResponse> getMyLikedFinches(UserDetails userDetails) {
+    public List<FinchResponseDto> getMyLikedFinches(UserDetails userDetails) {
         return getLikedFinchesByUsername(userDetails.getUsername());
     }
 }

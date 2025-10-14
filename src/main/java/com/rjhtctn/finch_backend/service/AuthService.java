@@ -1,9 +1,7 @@
 package com.rjhtctn.finch_backend.service;
 
-import com.rjhtctn.finch_backend.dto.auth.LoginRequest;
-import com.rjhtctn.finch_backend.dto.auth.RegisterRequest;
-import com.rjhtctn.finch_backend.dto.auth.LoginResponse;
-import com.rjhtctn.finch_backend.dto.user.UserResponse;
+import com.rjhtctn.finch_backend.dto.auth.*;
+import com.rjhtctn.finch_backend.dto.user.UserResponseDto;
 import com.rjhtctn.finch_backend.exception.ConflictException;
 import com.rjhtctn.finch_backend.exception.ResourceNotFoundException;
 import com.rjhtctn.finch_backend.mapper.UserMapper;
@@ -12,10 +10,7 @@ import com.rjhtctn.finch_backend.repository.UserRepository;
 import com.rjhtctn.finch_backend.security.JwtService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.mail.MailException;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.DisabledException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.authentication.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -49,11 +44,8 @@ public class AuthService {
         this.userService = userService;
     }
 
-    public UserResponse registerUser(RegisterRequest request) {
-        Optional<User> existingUser = userRepository
-                .findByUsernameOrEmail(request.getUsername(), request.getEmail());
-
-        if (existingUser.isPresent()) {
+    public UserResponseDto registerUser(RegisterRequestDto request) {
+        if (userRepository.findByUsernameOrEmail(request.getUsername(), request.getEmail()).isPresent()) {
             throw new ConflictException("Username or email already taken");
         }
 
@@ -74,12 +66,12 @@ public class AuthService {
             mailService.sendVerificationEmail(savedUser, token);
         } catch (MailException e) {
             userRepository.delete(savedUser);
-            throw new ConflictException("Failed to send verification email. Please try registering again.");
+            throw new ConflictException("Failed to send verification email: " + e.getMessage());
         }
         return UserMapper.toUserResponse(savedUser);
     }
 
-    public LoginResponse login(LoginRequest request) {
+    public LoginResponseDto login(LoginRequestDto request) {
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.getLoginIdentifier(), request.getPassword())
@@ -87,35 +79,33 @@ public class AuthService {
 
             var userDetails = (org.springframework.security.core.userdetails.User) authentication.getPrincipal();
             User user = userService.findUserByUsername(userDetails.getUsername());
-            String token = jwtService.generateToken(userDetails);
-
+            String token = jwtService.generateToken(user);
             String jwtId = jwtService.extractJwtId(token);
-            if(jwtId == null || jwtId.isBlank()){
+
+            if (jwtId == null || jwtId.isBlank()) {
                 throw new IllegalStateException("JWT id (jti) could not be extracted");
             }
+
             validTokenService.createTokenRecord(jwtId, user);
-            return new LoginResponse(token);
+            return new LoginResponseDto(token);
 
         } catch (DisabledException e) {
             resendVerificationToken(request.getLoginIdentifier());
             throw new ConflictException("Account is not verified. A new verification email has been sent.");
-
         } catch (BadCredentialsException e) {
-            throw new ConflictException("Invalid username or password");
+            throw new BadCredentialsException("Invalid username or password");
         }
     }
 
     @Transactional
     public void logout(HttpServletRequest request) {
         String authHeader = request.getHeader("Authorization");
-
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            throw new IllegalArgumentException("Authorization header missing or invalid");
+            throw new IllegalStateException("Authorization header missing or invalid");
         }
 
         String token = authHeader.substring(7);
         String jwtId = jwtService.extractJwtId(token);
-
         if (jwtId == null || jwtId.isBlank()) {
             throw new IllegalStateException("JWT ID not found in token");
         }
@@ -126,17 +116,17 @@ public class AuthService {
     public void verifyAccount(String token) {
         String username = jwtService.extractUsername(token);
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found for token with username: " + username));
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("User not found for token with username: " + username));
 
-        if (user.getLatestVerificationJwt() == null  || user.getLatestVerificationJwt().isEmpty() ||
-                !user.getLatestVerificationJwt().equals(token)) {
+        if (user.getLatestVerificationJwt() == null || !user.getLatestVerificationJwt().equals(token)) {
             throw new ConflictException("This verification link is invalid or has been superseded.");
         }
 
         if (user.isEnabled()) {
-            System.out.println("This account is already enabled.");
-            return;
+            throw new ConflictException("This account is already activated.");
         }
+
         user.setEnabled(true);
         user.setLatestVerificationJwt(null);
         userRepository.save(user);
@@ -153,7 +143,41 @@ public class AuthService {
         String token = jwtService.generateVerificationToken(user);
         user.setLatestVerificationJwt(token);
         userRepository.save(user);
+        try {
+            mailService.sendVerificationEmail(user, token);
+        } catch (MailException e) {
+            throw new ConflictException("Could not resend verification email: " + e.getMessage());
+        }
+    }
 
-        mailService.sendVerificationEmail(user, token);
+    public void requestPasswordReset(String email) {
+        Optional<User> userOptional = userRepository.findByUsernameOrEmail(email, email);
+        if (userOptional.isEmpty()) return;
+
+        User user = userOptional.get();
+        String token = jwtService.generateToken(user);
+
+        validTokenService.invalidateAllTokensForUser(user);
+        validTokenService.createTokenRecord(jwtService.extractJwtId(token), user);
+
+        try {
+            mailService.sendPasswordResetEmail(user, token);
+        } catch (MailException e) {
+            throw new ConflictException("Failed to send password reset email: " + e.getMessage());
+        }
+    }
+
+    public void performPasswordReset(String token, String newPassword) {
+        String username = jwtService.extractUsername(token);
+        User user = userService.findUserByUsername(username);
+        String jwtId = jwtService.extractJwtId(token);
+
+        if (!validTokenService.isTokenValidInDatabase(jwtId)) {
+            throw new ConflictException("This password reset link is invalid or expired.");
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        validTokenService.invalidateAllTokensForUser(user);
     }
 }

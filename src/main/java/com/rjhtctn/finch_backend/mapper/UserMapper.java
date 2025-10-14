@@ -1,19 +1,19 @@
 package com.rjhtctn.finch_backend.mapper;
 
-import com.rjhtctn.finch_backend.dto.user.UpdateUserProfileRequest;
-import com.rjhtctn.finch_backend.dto.user.UserMeResponse;
-import com.rjhtctn.finch_backend.dto.user.UserProfileResponse;
-import com.rjhtctn.finch_backend.dto.user.UserResponse;
+import com.rjhtctn.finch_backend.dto.user.UpdateUserProfileRequestDto;
+import com.rjhtctn.finch_backend.dto.user.UserMeResponseDto;
+import com.rjhtctn.finch_backend.dto.user.UserProfileResponseDto;
+import com.rjhtctn.finch_backend.dto.user.UserResponseDto;
 import com.rjhtctn.finch_backend.model.User;
 
 public class UserMapper {
 
-    public static UserResponse toUserResponse(User user) {
+    public static UserResponseDto toUserResponse(User user) {
         if (user == null) {
             return null;
         }
 
-        UserResponse dto = new UserResponse();
+        UserResponseDto dto = new UserResponseDto();
         dto.setId(user.getId());
         dto.setUsername(user.getUsername());
         dto.setFirstName(user.getFirstName());
@@ -23,12 +23,12 @@ public class UserMapper {
         return dto;
     }
 
-    public static UserProfileResponse toUserProfileResponse(User user) {
+    public static UserProfileResponseDto toUserProfileResponse(User user) {
         if (user == null) {
             return null;
         }
 
-        UserProfileResponse dto = new UserProfileResponse();
+        UserProfileResponseDto dto = new UserProfileResponseDto();
         dto.setId(user.getId());
         dto.setUsername(user.getUsername());
         dto.setFirstName(user.getFirstName());
@@ -43,7 +43,7 @@ public class UserMapper {
         return dto;
     }
 
-    public static void updateUserFromDto(User userToUpdate, UpdateUserProfileRequest request) {
+    public static void updateUserFromDto(User userToUpdate, UpdateUserProfileRequestDto request) {
         if (userToUpdate == null) {
             return;
         }
@@ -61,12 +61,12 @@ public class UserMapper {
         userToUpdate.setBannerImageUrl(request.getBannerImageUrl());
     }
 
-    public static UserMeResponse toUserMeResponse(User user) {
+    public static UserMeResponseDto toUserMeResponse(User user) {
         if (user == null) {
             return null;
         }
 
-        UserMeResponse dto = new UserMeResponse();
+        UserMeResponseDto dto = new UserMeResponseDto();
         dto.setId(user.getId());
         dto.setUsername(user.getUsername());
         dto.setFirstName(user.getFirstName());

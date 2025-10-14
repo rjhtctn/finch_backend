@@ -27,14 +27,14 @@ public class JwtService {
         return extractClaim(token, Claims::getSubject);
     }
 
-    public String generateToken(UserDetails userDetails) {
-        return generateToken(new HashMap<>(), userDetails);
+    public String generateToken(User user) {
+        return generateToken(new HashMap<>(), user);
     }
 
-    public String generateToken(Map<String, Object> extraClaims, UserDetails userDetails) {
+    public String generateToken(Map<String, Object> extraClaims, User user) {
         return Jwts.builder()
                 .claims(extraClaims)
-                .subject(userDetails.getUsername())
+                .subject(user.getUsername())
                 .issuedAt(Date.from(Instant.now()))
                 .id(UUID.randomUUID().toString())
                 .expiration(Date.from(Instant.now().plus(10, ChronoUnit.HOURS)))

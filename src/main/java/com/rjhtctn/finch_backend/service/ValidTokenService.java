@@ -21,6 +21,8 @@ public class ValidTokenService {
     }
 
     public boolean isTokenValidInDatabase(String jwtId) {
+
+        System.out.println(validTokenRepository.findByJwtId(jwtId).isPresent());
         return validTokenRepository.findByJwtId(jwtId).isPresent();
     }
 

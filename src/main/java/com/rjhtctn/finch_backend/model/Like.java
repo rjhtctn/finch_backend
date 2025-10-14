@@ -3,7 +3,7 @@ package com.rjhtctn.finch_backend.model;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
-import java.time.Instant;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -30,7 +30,7 @@ public class Like {
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
-    private Instant createdAt;
+    private LocalDateTime createdAt;
 
     public Like(User user, Finch finch) {
         this.user = user;

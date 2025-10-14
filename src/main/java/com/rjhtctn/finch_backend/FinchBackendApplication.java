@@ -10,5 +10,4 @@ public class FinchBackendApplication {
 
         SpringApplication.run(FinchBackendApplication.class, args);
     }
-
 }

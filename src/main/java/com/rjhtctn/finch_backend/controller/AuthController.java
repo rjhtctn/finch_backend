@@ -1,10 +1,7 @@
 package com.rjhtctn.finch_backend.controller;
 
-import com.rjhtctn.finch_backend.dto.auth.LoginRequest;
-import com.rjhtctn.finch_backend.dto.auth.RegisterRequest;
-import com.rjhtctn.finch_backend.dto.auth.ResendTokenRequest;
-import com.rjhtctn.finch_backend.dto.auth.LoginResponse;
-import com.rjhtctn.finch_backend.dto.user.UserResponse;
+import com.rjhtctn.finch_backend.dto.auth.*;
+import com.rjhtctn.finch_backend.dto.user.UserResponseDto;
 import com.rjhtctn.finch_backend.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -23,12 +20,12 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<UserResponse> registerUser(@RequestBody RegisterRequest request) {
+    public ResponseEntity<UserResponseDto> registerUser(@RequestBody RegisterRequestDto request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(authService.registerUser(request));
     }
 
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<LoginResponseDto> login(@RequestBody LoginRequestDto request) {
         return ResponseEntity.ok(authService.login(request));
     }
 
@@ -45,8 +42,20 @@ public class AuthController {
     }
 
     @PostMapping("/resend-verification")
-    public ResponseEntity<String> resendVerificationToken(@Valid @RequestBody ResendTokenRequest request) {
+    public ResponseEntity<String> resendVerificationToken(@Valid @RequestBody ResendTokenRequestDto request) {
         authService.resendVerificationToken(request.getEmail());
         return ResponseEntity.ok("If an account with this email exists, a new verification link has been sent.");
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<String> forgotPassword(@Valid @RequestBody ForgotPasswordRequestDto request) {
+        authService.requestPasswordReset(request.getEmail());
+        return ResponseEntity.ok("If an account with that email exists, a password reset link has been sent.");
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<String> resetPassword(@Valid @RequestBody ResetPasswordRequestDto request) {
+        authService.performPasswordReset(request.getToken(), request.getNewPassword());
+        return ResponseEntity.ok("Password has been reset successfully.");
     }
 }

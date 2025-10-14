@@ -1,6 +1,6 @@
 package com.rjhtctn.finch_backend.service;
 
-import com.rjhtctn.finch_backend.dto.user.UserResponse;
+import com.rjhtctn.finch_backend.dto.user.UserResponseDto;
 import com.rjhtctn.finch_backend.exception.ConflictException;
 import com.rjhtctn.finch_backend.mapper.UserMapper;
 import com.rjhtctn.finch_backend.model.Follow;
@@ -53,7 +53,7 @@ public class FollowService {
         return userService.findUserByUsername(username);
     }
 
-    public List<UserResponse> getFollowers(User user) {
+    public List<UserResponseDto> getFollowers(User user) {
         List<Follow> followRecords = followRepository.findAllByFollowing(user);
 
         return followRecords.stream()
@@ -61,7 +61,7 @@ public class FollowService {
                 .collect(Collectors.toList());
     }
 
-    public List<UserResponse> getFollowing(User user) {
+    public List<UserResponseDto> getFollowing(User user) {
         List<Follow> followRecords = followRepository.findAllByFollower(user);
 
         return followRecords.stream()

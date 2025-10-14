@@ -1,8 +1,8 @@
 package com.rjhtctn.finch_backend.controller;
 
-import com.rjhtctn.finch_backend.dto.finch.CreateFinchRequest;
-import com.rjhtctn.finch_backend.dto.finch.FinchResponse;
-import com.rjhtctn.finch_backend.dto.finch.UpdateFinchRequest;
+import com.rjhtctn.finch_backend.dto.finch.CreateFinchRequestDto;
+import com.rjhtctn.finch_backend.dto.finch.FinchResponseDto;
+import com.rjhtctn.finch_backend.dto.finch.UpdateFinchRequestDto;
 import com.rjhtctn.finch_backend.service.FinchService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,24 +24,24 @@ public class FinchController {
     }
 
     @PostMapping
-    public ResponseEntity<FinchResponse> createFinch(
-            @RequestBody CreateFinchRequest createFinchRequest,
+    public ResponseEntity<FinchResponseDto> createFinch(
+            @RequestBody CreateFinchRequestDto createFinchRequestDto,
             @AuthenticationPrincipal UserDetails userDetails) {
 
-        FinchResponse createdFinch = finchService.createFinch(createFinchRequest, userDetails);
+        FinchResponseDto createdFinch = finchService.createFinch(createFinchRequestDto, userDetails);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(createdFinch);
     }
 
     @GetMapping
-    public ResponseEntity<List<FinchResponse>> getAllFinches() {
-        List<FinchResponse> finches = finchService.getAllFinches();
+    public ResponseEntity<List<FinchResponseDto>> getAllFinches() {
+        List<FinchResponseDto> finches = finchService.getAllFinches();
         return ResponseEntity.ok(finches);
     }
 
     @GetMapping("/{finchId}")
-    public ResponseEntity<FinchResponse> getFinchById(@PathVariable UUID finchId) {
-        FinchResponse finch = finchService.getFinchById(finchId);
+    public ResponseEntity<FinchResponseDto> getFinchById(@PathVariable UUID finchId) {
+        FinchResponseDto finch = finchService.getFinchById(finchId);
         return ResponseEntity.ok(finch);
     }
 
@@ -55,12 +55,12 @@ public class FinchController {
     }
 
     @PutMapping("/{finchId}")
-    public ResponseEntity<FinchResponse> updateFinch(
+    public ResponseEntity<FinchResponseDto> updateFinch(
             @PathVariable UUID finchId,
-            @RequestBody UpdateFinchRequest request,
+            @RequestBody UpdateFinchRequestDto request,
             @AuthenticationPrincipal UserDetails userDetails) {
 
-        FinchResponse updatedFinch = finchService.updateFinch(finchId, request, userDetails);
+        FinchResponseDto updatedFinch = finchService.updateFinch(finchId, request, userDetails);
         return ResponseEntity.ok(updatedFinch);
     }
 }

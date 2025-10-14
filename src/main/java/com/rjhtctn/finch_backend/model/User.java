@@ -45,13 +45,16 @@ public class User {
     @Column(length = 160)
     private String bio;
 
+    @Column
     private String profileImageUrl;
 
+    @Column
     private String bannerImageUrl;
 
     @Column(length = 50)
     private String location;
 
+    @Column(length = 50)
     private String website;
 
     @CreationTimestamp

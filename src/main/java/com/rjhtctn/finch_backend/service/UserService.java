@@ -8,6 +8,7 @@ import com.rjhtctn.finch_backend.dto.user.UserResponse;
 import com.rjhtctn.finch_backend.mapper.UserMapper;
 import com.rjhtctn.finch_backend.model.User;
 import com.rjhtctn.finch_backend.repository.UserRepository;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -19,7 +20,7 @@ public class UserService {
     private final FinchService finchService;
 
 
-    public UserService(UserRepository userRepository, FinchService finchService) {
+    public UserService(UserRepository userRepository, @Lazy FinchService finchService) {
         this.userRepository = userRepository;
         this.finchService = finchService;
     }

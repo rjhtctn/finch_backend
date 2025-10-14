@@ -3,11 +3,13 @@ package com.rjhtctn.finch_backend.service;
 import com.rjhtctn.finch_backend.dto.finch.CreateFinchRequest;
 import com.rjhtctn.finch_backend.dto.finch.FinchResponse;
 import com.rjhtctn.finch_backend.dto.finch.UpdateFinchRequest;
+import com.rjhtctn.finch_backend.exception.ResourceNotFoundException;
 import com.rjhtctn.finch_backend.mapper.FinchMapper;
 import com.rjhtctn.finch_backend.model.Finch;
 import com.rjhtctn.finch_backend.model.User;
 import com.rjhtctn.finch_backend.repository.FinchRepository;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
@@ -49,21 +51,21 @@ public class FinchService {
 
     public FinchResponse getFinchById(UUID finchId) {
         Finch finch = finchRepository.findById(finchId).orElseThrow(() ->
-                new RuntimeException("Finch not found with id: " + finchId));
+                new ResourceNotFoundException("Finch not found with id: " + finchId));
 
         return FinchMapper.toFinchResponse(finch);
     }
 
     public void deleteFinch(UUID finchId, UserDetails userDetails) {
         Finch finchToDelete = finchRepository.findById(finchId)
-                .orElseThrow(() -> new RuntimeException("Finch not found with id: " + finchId));
+                .orElseThrow(() -> new ResourceNotFoundException("Finch not found with id: " + finchId));
 
         String requestingUsername = userDetails.getUsername();
 
         String authorUsername = finchToDelete.getUser().getUsername();
 
         if (!requestingUsername.equals(authorUsername)) {
-            throw new IllegalStateException("You are not authorized to delete this finch.");
+            throw new AccessDeniedException("You are not authorized to delete this finch.");
         }
 
         finchRepository.delete(finchToDelete);
@@ -71,13 +73,13 @@ public class FinchService {
 
     public FinchResponse updateFinch(UUID finchId, UpdateFinchRequest request, UserDetails userDetails) {
         Finch finchToUpdate = finchRepository.findById(finchId)
-                .orElseThrow(() -> new RuntimeException("Finch not found with id: " + finchId));
+                .orElseThrow(() -> new ResourceNotFoundException("Finch not found with id: " + finchId));
 
         String requestingUsername = userDetails.getUsername();
         String authorUsername = finchToUpdate.getUser().getUsername();
 
         if (!requestingUsername.equals(authorUsername)) {
-            throw new IllegalStateException("You are not authorized to update this finch.");
+            throw new AccessDeniedException("You are not authorized to update this finch.");
         }
 
         finchToUpdate.setContent(request.getContent());

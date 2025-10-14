@@ -5,6 +5,7 @@ import com.rjhtctn.finch_backend.dto.user.UpdateUserProfileRequest;
 import com.rjhtctn.finch_backend.dto.user.UserMeResponse;
 import com.rjhtctn.finch_backend.dto.user.UserProfileResponse;
 import com.rjhtctn.finch_backend.dto.user.UserResponse;
+import com.rjhtctn.finch_backend.exception.ResourceNotFoundException;
 import com.rjhtctn.finch_backend.mapper.UserMapper;
 import com.rjhtctn.finch_backend.model.User;
 import com.rjhtctn.finch_backend.repository.UserRepository;
@@ -26,8 +27,7 @@ public class UserService {
     }
 
     public UserProfileResponse getUserProfile(String username) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found with username: " + username));
+        User user = findUserByUsername(username);
         return UserMapper.toUserProfileResponse(user);
     }
 
@@ -40,7 +40,6 @@ public class UserService {
 
     public UserProfileResponse updateUserProfile(String username, UpdateUserProfileRequest request) {
         User userToUpdate = findUserByUsername(username);
-
         UserMapper.updateUserFromDto(userToUpdate, request);
         User updatedUser = userRepository.save(userToUpdate);
         return UserMapper.toUserProfileResponse(updatedUser);
@@ -54,7 +53,7 @@ public class UserService {
 
     public User findUserByUsername(String username) {
         return userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found with username: " + username));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with username: " + username));
     }
 
     public UserMeResponse getMyProfile(String username) {
@@ -65,10 +64,6 @@ public class UserService {
 
     public List<FinchResponse> getFinchesOfUser(String username) {
         findUserByUsername(username);
-
-        if (findUserByUsername(username) == null) {
-            throw new RuntimeException("User not found with username: " + username);
-        }
 
         return finchService.getFinchesByUsername(username);
     }

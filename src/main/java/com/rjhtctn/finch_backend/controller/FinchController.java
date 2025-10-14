@@ -51,7 +51,7 @@ public class FinchController {
             @AuthenticationPrincipal UserDetails userDetails) {
 
         finchService.deleteFinch(finchId, userDetails);
-        return ResponseEntity.noContent().build(); // 204 No Content
+        return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/{finchId}")

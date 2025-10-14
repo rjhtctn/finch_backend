@@ -1,4 +1,4 @@
-package com.rjhtctn.finch_backend.dto.response;
+package com.rjhtctn.finch_backend.dto.user;
 
 import lombok.Data;
 import java.util.UUID;

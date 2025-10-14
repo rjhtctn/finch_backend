@@ -1,4 +1,4 @@
-package com.rjhtctn.finch_backend.dto.response;
+package com.rjhtctn.finch_backend.dto.auth;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

@@ -1,10 +1,10 @@
 package com.rjhtctn.finch_backend.controller;
 
-import com.rjhtctn.finch_backend.dto.request.LoginRequest;
-import com.rjhtctn.finch_backend.dto.request.RegisterRequest;
-import com.rjhtctn.finch_backend.dto.request.ResendTokenRequest;
-import com.rjhtctn.finch_backend.dto.response.LoginResponse;
-import com.rjhtctn.finch_backend.dto.response.UserResponse;
+import com.rjhtctn.finch_backend.dto.auth.LoginRequest;
+import com.rjhtctn.finch_backend.dto.auth.RegisterRequest;
+import com.rjhtctn.finch_backend.dto.auth.ResendTokenRequest;
+import com.rjhtctn.finch_backend.dto.auth.LoginResponse;
+import com.rjhtctn.finch_backend.dto.user.UserResponse;
 import com.rjhtctn.finch_backend.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;

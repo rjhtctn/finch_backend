@@ -1,14 +1,16 @@
 package com.rjhtctn.finch_backend.controller;
 
-import com.rjhtctn.finch_backend.dto.request.UpdateUserProfileRequest;
-import com.rjhtctn.finch_backend.dto.response.UserProfileResponse;
-import com.rjhtctn.finch_backend.dto.response.UserResponse;
+import com.rjhtctn.finch_backend.dto.finch.FinchResponse;
+import com.rjhtctn.finch_backend.dto.user.UpdateUserProfileRequest;
+import com.rjhtctn.finch_backend.dto.user.UserMeResponse;
+import com.rjhtctn.finch_backend.dto.user.UserProfileResponse;
+import com.rjhtctn.finch_backend.dto.user.UserResponse;
 import com.rjhtctn.finch_backend.service.UserService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/users")
@@ -32,19 +34,31 @@ public class UserController {
         return ResponseEntity.ok(users);
     }
 
-    @PutMapping("/{userId}")
+    @PutMapping("/me")
     public ResponseEntity<UserProfileResponse> updateUserProfile(
-            @PathVariable UUID userId,
-            @RequestBody UpdateUserProfileRequest request) {
+            @RequestBody UpdateUserProfileRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
 
-        UserProfileResponse updatedUser = userService.updateUserProfile(userId, request);
+        UserProfileResponse updatedUser = userService.updateUserProfile(userDetails.getUsername(), request);
         return ResponseEntity.ok(updatedUser);
     }
 
-    @DeleteMapping("/{userId}")
-    public ResponseEntity<Void> deleteUser(@PathVariable UUID userId) {
-        userService.deleteUser(userId);
-
+    @DeleteMapping("/me")
+    public ResponseEntity<Void> deleteUser(@AuthenticationPrincipal UserDetails userDetails) {
+        userService.deleteUser(userDetails.getUsername());
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<UserMeResponse> getMyProfile(@AuthenticationPrincipal UserDetails userDetails) {
+        UserMeResponse myProfile = userService.getMyProfile(userDetails.getUsername());
+
+        return ResponseEntity.ok(myProfile);
+    }
+
+    @GetMapping("/{username}/finch")
+    public ResponseEntity<List<FinchResponse>> getFinchesOfUser(@PathVariable String username) {
+        List<FinchResponse> finches = userService.getFinchesOfUser(username);
+        return ResponseEntity.ok(finches);
     }
 }

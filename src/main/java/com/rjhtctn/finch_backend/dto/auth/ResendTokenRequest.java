@@ -1,4 +1,4 @@
-package com.rjhtctn.finch_backend.dto.request;
+package com.rjhtctn.finch_backend.dto.auth;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

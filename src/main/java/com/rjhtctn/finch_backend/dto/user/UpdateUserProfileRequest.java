@@ -1,4 +1,4 @@
-package com.rjhtctn.finch_backend.dto.request;
+package com.rjhtctn.finch_backend.dto.user;
 
 import lombok.Data;
 

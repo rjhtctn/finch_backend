@@ -1,6 +1,6 @@
 package com.rjhtctn.finch_backend.mapper;
 
-import com.rjhtctn.finch_backend.dto.response.FinchResponse;
+import com.rjhtctn.finch_backend.dto.finch.FinchResponse;
 import com.rjhtctn.finch_backend.model.Finch;
 
 public class FinchMapper {

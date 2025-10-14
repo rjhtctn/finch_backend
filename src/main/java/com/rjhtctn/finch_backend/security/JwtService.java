@@ -14,6 +14,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.Function;
 
 @Service
@@ -35,6 +36,7 @@ public class JwtService {
                 .claims(extraClaims)
                 .subject(userDetails.getUsername())
                 .issuedAt(Date.from(Instant.now()))
+                .id(UUID.randomUUID().toString())
                 .expiration(Date.from(Instant.now().plus(10, ChronoUnit.HOURS)))
                 .signWith(getSignInKey())
                 .compact();
@@ -80,7 +82,7 @@ public class JwtService {
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
-    public Date extractIssuedAt(String token) {
-        return extractClaim(token, Claims::getIssuedAt);
+    public String extractJwtId(String token) {
+        return extractClaim(token, Claims::getId);
     }
 }

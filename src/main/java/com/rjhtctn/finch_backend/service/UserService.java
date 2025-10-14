@@ -1,17 +1,18 @@
 package com.rjhtctn.finch_backend.service;
 
 import com.rjhtctn.finch_backend.dto.finch.FinchResponse;
-import com.rjhtctn.finch_backend.dto.user.UpdateUserProfileRequest;
-import com.rjhtctn.finch_backend.dto.user.UserMeResponse;
-import com.rjhtctn.finch_backend.dto.user.UserProfileResponse;
-import com.rjhtctn.finch_backend.dto.user.UserResponse;
+import com.rjhtctn.finch_backend.dto.user.*;
 import com.rjhtctn.finch_backend.exception.ResourceNotFoundException;
 import com.rjhtctn.finch_backend.mapper.UserMapper;
 import com.rjhtctn.finch_backend.model.User;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import com.rjhtctn.finch_backend.repository.UserRepository;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -21,13 +22,19 @@ public class UserService {
     private final UserRepository userRepository;
     private final FinchService finchService;
     private final FollowService followService;
+    private final PasswordEncoder passwordEncoder;
+    private final ValidTokenService validTokenService;
 
     public UserService(UserRepository userRepository,
                        @Lazy FinchService finchService,
-                       @Lazy FollowService followService) {
+                       @Lazy FollowService followService,
+                       PasswordEncoder passwordEncoder,
+                       ValidTokenService validTokenService) {
         this.userRepository = userRepository;
         this.finchService = finchService;
         this.followService = followService;
+        this.passwordEncoder = passwordEncoder;
+        this.validTokenService = validTokenService;
     }
 
     public User findUserByUsername(String username) {
@@ -52,6 +59,20 @@ public class UserService {
         UserMapper.updateUserFromDto(userToUpdate, request);
         User updatedUser = userRepository.save(userToUpdate);
         return UserMapper.toUserMeResponse(updatedUser);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void changePassword(UserDetails userDetails, ChangePasswordRequestDto request) {
+        User user = findUserByUsername(userDetails.getUsername());
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            throw new BadCredentialsException("Incorrect current password.");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+
+        userRepository.save(user);
+        validTokenService.invalidateAllTokensForUser(user);
     }
 
     public void deleteUser(UserDetails userDetails) {

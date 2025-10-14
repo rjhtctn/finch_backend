@@ -6,6 +6,7 @@ import com.rjhtctn.finch_backend.dto.auth.ResendTokenRequest;
 import com.rjhtctn.finch_backend.dto.auth.LoginResponse;
 import com.rjhtctn.finch_backend.dto.user.UserResponse;
 import com.rjhtctn.finch_backend.service.AuthService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -29,6 +30,12 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<String> logout(HttpServletRequest request) {
+        authService.logout(request);
+        return ResponseEntity.ok("Logout successful. Token invalidated.");
     }
 
     @GetMapping("/verify")

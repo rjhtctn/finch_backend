@@ -1,5 +1,6 @@
 package com.rjhtctn.finch_backend.security;
 
+import com.rjhtctn.finch_backend.service.ValidTokenService;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -19,10 +20,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
+    private final ValidTokenService validTokenService;
 
-    public JwtAuthenticationFilter(JwtService jwtService, UserDetailsService userDetailsService) {
+    public JwtAuthenticationFilter(JwtService jwtService, UserDetailsService userDetailsService, ValidTokenService validTokenService) {
         this.jwtService = jwtService;
         this.userDetailsService = userDetailsService;
+        this.validTokenService = validTokenService;
     }
 
     @Override
@@ -48,7 +51,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
 
-            if (jwtService.isTokenValid(jwt, userDetails)) {
+            boolean isTokenValid = jwtService.isTokenValid(jwt, userDetails);
+
+            String jwtId = jwtService.extractJwtId(jwt);
+            boolean isTokenActive = validTokenService.isTokenValidInDatabase(jwtId);
+
+            if (isTokenActive && isTokenValid) {
 
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         userDetails,

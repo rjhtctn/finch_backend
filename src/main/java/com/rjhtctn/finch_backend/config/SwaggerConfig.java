@@ -1,11 +1,12 @@
 package com.rjhtctn.finch_backend.config;
 
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
-import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.info.Info;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
+import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.servers.Server;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
@@ -16,7 +17,7 @@ import org.springframework.context.annotation.Configuration;
                 description = "Finch Backend için JWT destekli Swagger arayüzü"
         ),
         servers = {
-                @Server(url = "http://localhost:8080", description = "Local Server")
+                @Server(url = "${base.url}", description = "Local Server")
         },
         security = {
                 @SecurityRequirement(name = "bearerAuth")
@@ -30,3 +31,4 @@ import org.springframework.context.annotation.Configuration;
 )
 public class SwaggerConfig {
 }
+

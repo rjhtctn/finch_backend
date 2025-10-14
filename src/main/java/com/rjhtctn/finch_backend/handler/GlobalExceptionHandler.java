@@ -79,4 +79,12 @@ public class GlobalExceptionHandler {
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.FORBIDDEN);
     }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ErrorResponseDto> handleIllegalStateException(IllegalStateException ex, HttpServletRequest request) {
+        return new ResponseEntity<>(
+                new ErrorResponseDto(Instant.now(), 400, "Bad Request", "Unexpected request state", request.getRequestURI()),
+                HttpStatus.BAD_REQUEST
+        );
+    }
 }

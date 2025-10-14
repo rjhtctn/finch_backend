@@ -22,19 +22,23 @@ public class MailService {
     @Value("${app.mail.sender.name}")
     private String senderName;
 
+    @Value("${app.frontend.url}")
+    private String frontendUrl;
+
     public void sendVerificationEmail(User user, String token) {
         String recipientAddress = user.getEmail();
         String subject = "Finch - Hesabınızı Doğrulayın";
-        String confirmationUrl = "http://localhost:8080/api/auth/verify?token=" + token;
-        String message = """ 
-                            Finch hesabınızı doğrulamak için lütfen aşağıdaki linke tıklayın:
-                            """ + confirmationUrl;
+        String confirmationUrl = String.format("%s/api/auth/verify?token=%s", frontendUrl, token);
+        String message = """
+                            <p>Finch hesabınızı doğrulamak için aşağıdaki bağlantıya tıklayın:</p>
+                            <a href="%s">Hesabımı Doğrula</a>
+                            """.formatted(confirmationUrl);
 
             MimeMessagePreparator mailMessage = mimeMessage -> {
                 MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, "UTF-8");
                 helper.setTo(recipientAddress);
                 helper.setSubject(subject);
-                helper.setText(message, false);
+                helper.setText(message, true);
                 helper.setFrom(fromEmail, senderName);
             };
             mailSender.send(mailMessage);

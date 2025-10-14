@@ -1,11 +1,10 @@
 package com.rjhtctn.finch_backend.controller;
 
+import com.rjhtctn.finch_backend.dto.auth.LoginResponse;
 import com.rjhtctn.finch_backend.dto.finch.FinchResponse;
-import com.rjhtctn.finch_backend.dto.user.UpdateUserProfileRequest;
-import com.rjhtctn.finch_backend.dto.user.UserMeResponse;
-import com.rjhtctn.finch_backend.dto.user.UserProfileResponse;
-import com.rjhtctn.finch_backend.dto.user.UserResponse;
+import com.rjhtctn.finch_backend.dto.user.*;
 import com.rjhtctn.finch_backend.service.UserService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -54,6 +53,15 @@ public class UserController {
         UserMeResponse myProfile = userService.getMyProfile(userDetails);
 
         return ResponseEntity.ok(myProfile);
+    }
+
+    @PutMapping("/me/password")
+    public ResponseEntity<String> changePassword(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @Valid @RequestBody ChangePasswordRequestDto request) {
+
+        userService.changePassword(userDetails, request);
+        return ResponseEntity.ok("Password changed successfully.");
     }
 
     @GetMapping("/{username}/finch")

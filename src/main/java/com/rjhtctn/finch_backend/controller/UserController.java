@@ -61,4 +61,14 @@ public class UserController {
         List<FinchResponse> finches = userService.getFinchesOfUser(username);
         return ResponseEntity.ok(finches);
     }
+
+    @GetMapping("/{username}/followers")
+    public ResponseEntity<List<UserResponse>> getFollowers(@PathVariable String username) {
+        return ResponseEntity.ok(userService.getFollowers(username));
+    }
+
+    @GetMapping("/{username}/following")
+    public ResponseEntity<List<UserResponse>> getFollowing(@PathVariable String username) {
+        return ResponseEntity.ok(userService.getFollowing(username));
+    }
 }

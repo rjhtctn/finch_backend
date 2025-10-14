@@ -1,11 +1,16 @@
 package com.rjhtctn.finch_backend.service;
 
+import com.rjhtctn.finch_backend.dto.user.UserResponse;
 import com.rjhtctn.finch_backend.exception.ConflictException;
+import com.rjhtctn.finch_backend.mapper.UserMapper;
 import com.rjhtctn.finch_backend.model.Follow;
 import com.rjhtctn.finch_backend.model.User;
 import com.rjhtctn.finch_backend.repository.FollowRepository;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class FollowService {
@@ -46,5 +51,21 @@ public class FollowService {
 
     private User findUserByUsername(String username) {
         return userService.findUserByUsername(username);
+    }
+
+    public List<UserResponse> getFollowers(User user) {
+        List<Follow> followRecords = followRepository.findAllByFollowing(user);
+
+        return followRecords.stream()
+                .map(follow -> UserMapper.toUserResponse(follow.getFollower()))
+                .collect(Collectors.toList());
+    }
+
+    public List<UserResponse> getFollowing(User user) {
+        List<Follow> followRecords = followRepository.findAllByFollower(user);
+
+        return followRecords.stream()
+                .map(follow -> UserMapper.toUserResponse(follow.getFollowing()))
+                .collect(Collectors.toList());
     }
 }

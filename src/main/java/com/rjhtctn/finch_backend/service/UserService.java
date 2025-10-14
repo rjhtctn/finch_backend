@@ -19,11 +19,15 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final FinchService finchService;
+    private final FollowService followService;
 
 
-    public UserService(UserRepository userRepository, @Lazy FinchService finchService) {
+    public UserService(UserRepository userRepository,
+                       @Lazy FinchService finchService,
+                       @Lazy FollowService followService) {
         this.userRepository = userRepository;
         this.finchService = finchService;
+        this.followService = followService;
     }
 
     public UserProfileResponse getUserProfile(String username) {
@@ -66,5 +70,16 @@ public class UserService {
         findUserByUsername(username);
 
         return finchService.getFinchesByUsername(username);
+    }
+
+    public List<UserResponse> getFollowers(String username) {
+        User user = findUserByUsername(username);
+
+        return followService.getFollowers(user);
+    }
+
+    public List<UserResponse> getFollowing(String username) {
+        User user = findUserByUsername(username);
+        return followService.getFollowing(user);
     }
 }

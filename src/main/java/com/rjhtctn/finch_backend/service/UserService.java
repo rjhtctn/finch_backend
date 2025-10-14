@@ -22,7 +22,6 @@ public class UserService {
     private final FinchService finchService;
     private final FollowService followService;
 
-
     public UserService(UserRepository userRepository,
                        @Lazy FinchService finchService,
                        @Lazy FollowService followService) {
@@ -31,9 +30,9 @@ public class UserService {
         this.followService = followService;
     }
 
-    public UserProfileResponse getUserProfile(String username) {
-        User user = findUserByUsername(username);
-        return UserMapper.toUserProfileResponse(user);
+    public User findUserByUsername(String username) {
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with username: " + username));
     }
 
     public List<UserResponse> getAllUsers() {
@@ -43,26 +42,26 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
-    public UserProfileResponse updateUserProfile(String username, UpdateUserProfileRequest request) {
+    public UserProfileResponse getOneUser(String username) {
+        User user = findUserByUsername(username);
+        return UserMapper.toUserProfileResponse(user);
+    }
+
+    public UserMeResponse updateUserProfile(String username, UpdateUserProfileRequest request) {
         User userToUpdate = findUserByUsername(username);
         UserMapper.updateUserFromDto(userToUpdate, request);
         User updatedUser = userRepository.save(userToUpdate);
-        return UserMapper.toUserProfileResponse(updatedUser);
+        return UserMapper.toUserMeResponse(updatedUser);
     }
 
-    public void deleteUser(String username) {
-        User userToDelete = findUserByUsername(username);
+    public void deleteUser(UserDetails userDetails) {
+        User userToDelete =  findUserByUsername(userDetails.getUsername());
 
         userRepository.delete(userToDelete);
     }
 
-    public User findUserByUsername(String username) {
-        return userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with username: " + username));
-    }
-
-    public UserMeResponse getMyProfile(String username) {
-        User user = findUserByUsername(username);
+    public UserMeResponse getMyProfile(UserDetails userDetails) {
+        User user =  findUserByUsername(userDetails.getUsername());
 
         return UserMapper.toUserMeResponse(user);
     }
@@ -90,5 +89,14 @@ public class UserService {
 
     public List<UserResponse> getMyFollowing(UserDetails userDetails) {
         return getFollowing(userDetails.getUsername());
+    }
+
+    public List<FinchResponse> getLikedFinchesByUsername(String username) {
+        User user = findUserByUsername(username);
+        return finchService.getLikedFinchesByUser(user);
+    }
+
+    public List<FinchResponse> getMyLikedFinches(UserDetails userDetails) {
+        return getLikedFinchesByUsername(userDetails.getUsername());
     }
 }

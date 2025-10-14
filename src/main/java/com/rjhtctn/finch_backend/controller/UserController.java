@@ -24,7 +24,7 @@ public class UserController {
 
     @GetMapping("/{username}")
     public ResponseEntity<UserProfileResponse> getUserProfileByUsername(@PathVariable String username) {
-        UserProfileResponse userProfile = userService.getUserProfile(username);
+        UserProfileResponse userProfile = userService.getOneUser(username);
         return ResponseEntity.ok(userProfile);
     }
 
@@ -35,23 +35,23 @@ public class UserController {
     }
 
     @PutMapping("/me")
-    public ResponseEntity<UserProfileResponse> updateUserProfile(
+    public ResponseEntity<UserMeResponse> updateUserProfile(
             @RequestBody UpdateUserProfileRequest request,
             @AuthenticationPrincipal UserDetails userDetails) {
 
-        UserProfileResponse updatedUser = userService.updateUserProfile(userDetails.getUsername(), request);
+        UserMeResponse updatedUser = userService.updateUserProfile(userDetails.getUsername(), request);
         return ResponseEntity.ok(updatedUser);
     }
 
     @DeleteMapping("/me")
     public ResponseEntity<Void> deleteUser(@AuthenticationPrincipal UserDetails userDetails) {
-        userService.deleteUser(userDetails.getUsername());
+        userService.deleteUser(userDetails);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/me")
     public ResponseEntity<UserMeResponse> getMyProfile(@AuthenticationPrincipal UserDetails userDetails) {
-        UserMeResponse myProfile = userService.getMyProfile(userDetails.getUsername());
+        UserMeResponse myProfile = userService.getMyProfile(userDetails);
 
         return ResponseEntity.ok(myProfile);
     }
@@ -74,7 +74,6 @@ public class UserController {
 
     @GetMapping("/me/followers")
     public ResponseEntity<List<UserResponse>> getMyFollowers(@AuthenticationPrincipal UserDetails userDetails) {
-        // Controller artık sadece isteği alır ve UserDetails'i olduğu gibi servise devreder.
         List<UserResponse> followers = userService.getMyFollowers(userDetails);
         return ResponseEntity.ok(followers);
     }
@@ -83,5 +82,11 @@ public class UserController {
     public ResponseEntity<List<UserResponse>> getMyFollowing(@AuthenticationPrincipal UserDetails userDetails) {
         List<UserResponse> following = userService.getMyFollowing(userDetails);
         return ResponseEntity.ok(following);
+    }
+
+    @GetMapping("/me/liked_finches")
+    public ResponseEntity<List<FinchResponse>> getLikedFinches(@AuthenticationPrincipal UserDetails userDetails) {
+        List<FinchResponse> likedFinches = userService.getMyLikedFinches(userDetails);
+        return ResponseEntity.ok(likedFinches);
     }
 }

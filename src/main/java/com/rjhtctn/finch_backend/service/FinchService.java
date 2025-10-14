@@ -3,16 +3,18 @@ package com.rjhtctn.finch_backend.service;
 import com.rjhtctn.finch_backend.dto.finch.CreateFinchRequest;
 import com.rjhtctn.finch_backend.dto.finch.FinchResponse;
 import com.rjhtctn.finch_backend.dto.finch.UpdateFinchRequest;
+import com.rjhtctn.finch_backend.dto.user.UserResponse;
 import com.rjhtctn.finch_backend.exception.ResourceNotFoundException;
 import com.rjhtctn.finch_backend.mapper.FinchMapper;
+import com.rjhtctn.finch_backend.mapper.UserMapper;
 import com.rjhtctn.finch_backend.model.Finch;
 import com.rjhtctn.finch_backend.model.User;
 import com.rjhtctn.finch_backend.repository.FinchRepository;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
-
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -22,10 +24,14 @@ public class FinchService {
 
     private final FinchRepository finchRepository;
     private final UserService userService;
+    private final LikeService likeService;
 
-    public FinchService(FinchRepository finchRepository, UserService userService) {
+    public FinchService(FinchRepository finchRepository,
+                        UserService userService,
+                        @Lazy LikeService likeService) {
         this.finchRepository = finchRepository;
         this.userService = userService;
+        this.likeService = likeService;
     }
 
     public FinchResponse createFinch(CreateFinchRequest createFinchRequest, UserDetails userDetails) {
@@ -39,21 +45,6 @@ public class FinchService {
         Finch savedFinch = finchRepository.save(newFinch);
 
         return FinchMapper.toFinchResponse(savedFinch);
-    }
-
-    public List<FinchResponse> getAllFinches() {
-        List<Finch> finches = finchRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
-
-        return finches.stream()
-                .map(FinchMapper::toFinchResponse)
-                .collect(Collectors.toList());
-    }
-
-    public FinchResponse getFinchById(UUID finchId) {
-        Finch finch = finchRepository.findById(finchId).orElseThrow(() ->
-                new ResourceNotFoundException("Finch not found with id: " + finchId));
-
-        return FinchMapper.toFinchResponse(finch);
     }
 
     public void deleteFinch(UUID finchId, UserDetails userDetails) {
@@ -88,17 +79,54 @@ public class FinchService {
         return FinchMapper.toFinchResponse(updatedFinch);
     }
 
+    public List<FinchResponse> getAllFinches() {
+        List<Finch> finches = finchRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        return finches.stream()
+                .map(this::mapToFinchResponse)
+                .collect(Collectors.toList());
+    }
+
+    public Finch findFinchById(UUID finchId) {
+        return finchRepository.findById(finchId)
+                .orElseThrow(() -> new ResourceNotFoundException("Finch not found with id: " + finchId));
+    }
+
+    public FinchResponse getFinchById(UUID finchId) {
+        Finch finch = findFinchById(finchId);
+        return mapToFinchResponse(finch);
+    }
+
     public List<FinchResponse> getFinchesByUsername(String username) {
         List<Finch> finches = finchRepository.findByUser_Username(username, Sort.by(Sort.Direction.DESC, "createdAt"));
 
         return finches.stream()
-                .map(FinchMapper::toFinchResponse)
+                .map(this::mapToFinchResponse)
                 .collect(Collectors.toList());
     }
 
-    public List<FinchResponse> getMyFinches(UserDetails userDetails) {
-        String username = userDetails.getUsername();
+    public List<FinchResponse> getLikedFinchesByUser(User user) {
+        List<Finch> likedFinches = likeService.getLikedFinchesForUser(user);
 
-        return getFinchesByUsername(username);
+        return likedFinches.stream()
+                .map(this::mapToFinchResponse)
+                .collect(Collectors.toList());
+    }
+
+    private FinchResponse mapToFinchResponse(Finch finch) {
+        int likeCount = likeService.getLikeCountForFinch(finch);
+
+        List<User> likedUsers = likeService.getUsersForLikedFinch(finch);
+
+        FinchResponse response = FinchMapper.toFinchResponse(finch);
+
+        response.setLikeCount(likeCount);
+
+        List<UserResponse> likedUsersDto = likedUsers.stream()
+                        .map(UserMapper::toUserResponse)
+                .collect(Collectors.toList());
+        response.setLikedUsers(likedUsersDto);
+
+        return response;
     }
 }

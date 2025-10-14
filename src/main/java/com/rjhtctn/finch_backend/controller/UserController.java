@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/users")
+@RequestMapping("/api/user")
 public class UserController {
 
     private final UserService userService;
@@ -70,5 +70,18 @@ public class UserController {
     @GetMapping("/{username}/following")
     public ResponseEntity<List<UserResponse>> getFollowing(@PathVariable String username) {
         return ResponseEntity.ok(userService.getFollowing(username));
+    }
+
+    @GetMapping("/me/followers")
+    public ResponseEntity<List<UserResponse>> getMyFollowers(@AuthenticationPrincipal UserDetails userDetails) {
+        // Controller artık sadece isteği alır ve UserDetails'i olduğu gibi servise devreder.
+        List<UserResponse> followers = userService.getMyFollowers(userDetails);
+        return ResponseEntity.ok(followers);
+    }
+
+    @GetMapping("/me/following")
+    public ResponseEntity<List<UserResponse>> getMyFollowing(@AuthenticationPrincipal UserDetails userDetails) {
+        List<UserResponse> following = userService.getMyFollowing(userDetails);
+        return ResponseEntity.ok(following);
     }
 }

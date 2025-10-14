@@ -95,4 +95,10 @@ public class FinchService {
                 .map(FinchMapper::toFinchResponse)
                 .collect(Collectors.toList());
     }
+
+    public List<FinchResponse> getMyFinches(UserDetails userDetails) {
+        String username = userDetails.getUsername();
+
+        return getFinchesByUsername(username);
+    }
 }

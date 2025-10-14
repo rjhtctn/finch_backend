@@ -10,6 +10,7 @@ import com.rjhtctn.finch_backend.mapper.UserMapper;
 import com.rjhtctn.finch_backend.model.User;
 import com.rjhtctn.finch_backend.repository.UserRepository;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -81,5 +82,13 @@ public class UserService {
     public List<UserResponse> getFollowing(String username) {
         User user = findUserByUsername(username);
         return followService.getFollowing(user);
+    }
+
+    public List<UserResponse> getMyFollowers(UserDetails userDetails) {
+        return getFollowers(userDetails.getUsername());
+    }
+
+    public List<UserResponse> getMyFollowing(UserDetails userDetails) {
+        return getFollowing(userDetails.getUsername());
     }
 }

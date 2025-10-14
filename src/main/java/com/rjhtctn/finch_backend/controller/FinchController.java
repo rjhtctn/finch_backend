@@ -63,4 +63,11 @@ public class FinchController {
         FinchResponse updatedFinch = finchService.updateFinch(finchId, request, userDetails);
         return ResponseEntity.ok(updatedFinch);
     }
+
+    @GetMapping("/me")
+    public ResponseEntity<List<FinchResponse>> getMyFinches(@AuthenticationPrincipal UserDetails userDetails) {
+        List<FinchResponse> myFinches = finchService.getMyFinches(userDetails);
+
+        return ResponseEntity.ok(myFinches);
+    }
 }

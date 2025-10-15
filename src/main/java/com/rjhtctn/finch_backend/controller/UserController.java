@@ -63,6 +63,12 @@ public class UserController {
         return ResponseEntity.ok("Password changed successfully.");
     }
 
+    @GetMapping("/me/finch")
+    public ResponseEntity<List<FinchResponseDto>> getMyFinches(@AuthenticationPrincipal UserDetails userDetails){
+        List <FinchResponseDto> myFinches = userService.getMyFinches(userDetails);
+        return ResponseEntity.ok(myFinches);
+    }
+
     @GetMapping("/{username}/finch")
     public ResponseEntity<List<FinchResponseDto>> getFinchesOfUser(@PathVariable String username) {
         List<FinchResponseDto> finches = userService.getFinchesOfUser(username);
@@ -95,5 +101,17 @@ public class UserController {
     public ResponseEntity<List<FinchResponseDto>> getLikedFinches(@AuthenticationPrincipal UserDetails userDetails) {
         List<FinchResponseDto> likedFinches = userService.getMyLikedFinches(userDetails);
         return ResponseEntity.ok(likedFinches);
+    }
+
+    @PostMapping("/set-private")
+    public ResponseEntity<String> setPrivate(@AuthenticationPrincipal UserDetails userDetails) {
+        userService.setPrivateUser(userDetails);
+        return ResponseEntity.ok("Private user has been set successfully.");
+    }
+
+    @PostMapping("/set-public")
+    public ResponseEntity<String> setPublic(@AuthenticationPrincipal UserDetails userDetails) {
+        userService.setPublicUser(userDetails);
+        return ResponseEntity.ok("Public user has been set successfully.");
     }
 }

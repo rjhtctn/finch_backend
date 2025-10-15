@@ -12,9 +12,14 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.mail.MailException;
 import org.springframework.security.authentication.*;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
+import java.util.Date;
 import java.util.Optional;
 
 @Service
@@ -27,6 +32,7 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final ValidTokenService validTokenService;
     private final UserService userService;
+    private final UserDetailsService userDetailsService;
 
     public AuthService(UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
@@ -34,7 +40,8 @@ public class AuthService {
                        JwtService jwtService,
                        AuthenticationManager authenticationManager,
                        ValidTokenService validTokenService,
-                       UserService userService) {
+                       UserService userService,
+                       UserDetailsService userDetailsService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.mailService = mailService;
@@ -42,6 +49,7 @@ public class AuthService {
         this.authenticationManager = authenticationManager;
         this.validTokenService = validTokenService;
         this.userService = userService;
+        this.userDetailsService = userDetailsService;
     }
 
     public UserResponseDto registerUser(RegisterRequestDto request) {
@@ -79,21 +87,22 @@ public class AuthService {
 
             var userDetails = (org.springframework.security.core.userdetails.User) authentication.getPrincipal();
             User user = userService.findUserByUsername(userDetails.getUsername());
-            String token = jwtService.generateToken(user);
-            String jwtId = jwtService.extractJwtId(token);
+            String token = jwtService.generateToken(userDetails);
+            String jwtId = jwtService.extractId(token);
 
             if (jwtId == null || jwtId.isBlank()) {
                 throw new IllegalStateException("JWT id (jti) could not be extracted");
             }
 
-            validTokenService.createTokenRecord(jwtId, user);
+            Date issuedAt = jwtService.extractIssuedAt(token);
+            Date expirationAt = jwtService.extractExpiration(token);
+
+            validTokenService.createTokenRecord(jwtId, user,issuedAt,expirationAt);
             return new LoginResponseDto(token);
 
         } catch (DisabledException e) {
             resendVerificationToken(request.getLoginIdentifier());
             throw new ConflictException("Account is not verified. A new verification email has been sent.");
-        } catch (BadCredentialsException e) {
-            throw new BadCredentialsException("Invalid username or password");
         }
     }
 
@@ -105,7 +114,7 @@ public class AuthService {
         }
 
         String token = authHeader.substring(7);
-        String jwtId = jwtService.extractJwtId(token);
+        String jwtId = jwtService.extractId(token);
         if (jwtId == null || jwtId.isBlank()) {
             throw new IllegalStateException("JWT ID not found in token");
         }
@@ -155,10 +164,14 @@ public class AuthService {
         if (userOptional.isEmpty()) return;
 
         User user = userOptional.get();
-        String token = jwtService.generateToken(user);
+        UserDetails userDetails = userDetailsService.loadUserByUsername(user.getUsername());
+        String token = jwtService.generateToken(userDetails);
+
+        Date issuedAt = jwtService.extractIssuedAt(token);
+        Date expirationAt = jwtService.extractExpiration(token);
 
         validTokenService.invalidateAllTokensForUser(user);
-        validTokenService.createTokenRecord(jwtService.extractJwtId(token), user);
+        validTokenService.createTokenRecord(jwtService.extractId(token), user,issuedAt,expirationAt);
 
         try {
             mailService.sendPasswordResetEmail(user, token);
@@ -170,7 +183,7 @@ public class AuthService {
     public void performPasswordReset(String token, String newPassword) {
         String username = jwtService.extractUsername(token);
         User user = userService.findUserByUsername(username);
-        String jwtId = jwtService.extractJwtId(token);
+        String jwtId = jwtService.extractId(token);
 
         if (!validTokenService.isTokenValidInDatabase(jwtId)) {
             throw new ConflictException("This password reset link is invalid or expired.");

@@ -40,6 +40,9 @@ public class User {
     private String password;
 
     @Column(nullable = false)
+    private boolean isPrivate = false;
+
+    @Column(nullable = false)
     private boolean enabled = false;
 
     @Column(length = 160)

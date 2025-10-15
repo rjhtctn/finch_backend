@@ -4,13 +4,17 @@ import com.rjhtctn.finch_backend.dto.finch.CreateFinchRequestDto;
 import com.rjhtctn.finch_backend.dto.finch.FinchResponseDto;
 import com.rjhtctn.finch_backend.dto.finch.UpdateFinchRequestDto;
 import com.rjhtctn.finch_backend.dto.user.UserResponseDto;
+import com.rjhtctn.finch_backend.exception.ConflictException;
 import com.rjhtctn.finch_backend.exception.ResourceNotFoundException;
 import com.rjhtctn.finch_backend.mapper.FinchMapper;
 import com.rjhtctn.finch_backend.mapper.UserMapper;
 import com.rjhtctn.finch_backend.model.Finch;
+import com.rjhtctn.finch_backend.model.Follow;
 import com.rjhtctn.finch_backend.model.User;
 import com.rjhtctn.finch_backend.repository.FinchRepository;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -83,6 +87,7 @@ public class FinchService {
         List<Finch> finches = finchRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
 
         return finches.stream()
+                .filter(finch -> !finch.getUser().isPrivate())
                 .map(this::mapToFinchResponse)
                 .collect(Collectors.toList());
     }
@@ -94,13 +99,18 @@ public class FinchService {
 
     public FinchResponseDto getFinchById(UUID finchId) {
         Finch finch = findFinchById(finchId);
+        if (finch.getUser().isPrivate()) {
+            throw new ConflictException("User is private.");
+        }
         return mapToFinchResponse(finch);
     }
 
     public List<FinchResponseDto> getFinchesByUsername(String username) {
-        List<Finch> finches = finchRepository.findByUser_Username(username, Sort.by(Sort.Direction.DESC, "createdAt"));
+        List<Finch> finches = finchRepository.
+                findByUser_Username(username, Sort.by(Sort.Direction.DESC, "createdAt"));
 
         return finches.stream()
+                .filter(finch -> !finch.getUser().isPrivate())
                 .map(this::mapToFinchResponse)
                 .collect(Collectors.toList());
     }
@@ -111,6 +121,20 @@ public class FinchService {
         return likedFinches.stream()
                 .map(this::mapToFinchResponse)
                 .collect(Collectors.toList());
+    }
+
+    public Page<FinchResponseDto> getTimeline(UserDetails userDetails, Pageable pageable) {
+        User currentUser = userService.findUserByUsername(userDetails.getUsername());
+
+        List<User> followingUsers = currentUser.getFollowing().stream()
+                .map(Follow::getFollowing)
+                .collect(Collectors.toList());
+
+        followingUsers.add(currentUser);
+
+        Page<Finch> finchPage = finchRepository.findByUserIn(followingUsers, pageable);
+
+        return finchPage.map(this::mapToFinchResponse);
     }
 
     private FinchResponseDto mapToFinchResponse(Finch finch) {

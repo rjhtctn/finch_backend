@@ -2,6 +2,7 @@ package com.rjhtctn.finch_backend.service;
 
 import com.rjhtctn.finch_backend.dto.finch.FinchResponseDto;
 import com.rjhtctn.finch_backend.dto.user.*;
+import com.rjhtctn.finch_backend.exception.ConflictException;
 import com.rjhtctn.finch_backend.exception.ResourceNotFoundException;
 import com.rjhtctn.finch_backend.mapper.UserMapper;
 import com.rjhtctn.finch_backend.model.User;
@@ -12,7 +13,6 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -44,13 +44,18 @@ public class UserService {
 
     public List<UserResponseDto> getAllUsers() {
         List<User> users = userRepository.findAll();
+
         return users.stream()
+                .filter(user -> !user.isPrivate())
                 .map(UserMapper::toUserResponse)
                 .collect(Collectors.toList());
     }
 
     public UserProfileResponseDto getOneUser(String username) {
         User user = findUserByUsername(username);
+        if (user.isPrivate()) {
+            throw new ConflictException("User is private");
+        }
         return UserMapper.toUserProfileResponse(user);
     }
 
@@ -88,19 +93,30 @@ public class UserService {
     }
 
     public List<FinchResponseDto> getFinchesOfUser(String username) {
-        findUserByUsername(username);
+        if (isPrivate(username)) {
+            throw new ConflictException("User is private");
+        }
+        return finchService.getFinchesByUsername(username);
+    }
 
+    public List<FinchResponseDto> getMyFinches(UserDetails userDetails) {
+        String username = userDetails.getUsername();
         return finchService.getFinchesByUsername(username);
     }
 
     public List<UserResponseDto> getFollowers(String username) {
         User user = findUserByUsername(username);
-
+        if (user.isPrivate()) {
+            throw new ConflictException("User is private");
+        }
         return followService.getFollowers(user);
     }
 
     public List<UserResponseDto> getFollowing(String username) {
         User user = findUserByUsername(username);
+        if (user.isPrivate()) {
+            throw new ConflictException("User is private");
+        }
         return followService.getFollowing(user);
     }
 
@@ -114,10 +130,36 @@ public class UserService {
 
     public List<FinchResponseDto> getLikedFinchesByUsername(String username) {
         User user = findUserByUsername(username);
+        if (user.isPrivate()) {
+            throw new ConflictException("User is private");
+        }
         return finchService.getLikedFinchesByUser(user);
     }
 
     public List<FinchResponseDto> getMyLikedFinches(UserDetails userDetails) {
         return getLikedFinchesByUsername(userDetails.getUsername());
+    }
+
+    public void setPrivateUser(UserDetails userDetails) {
+        User user = findUserByUsername(userDetails.getUsername());
+        if  (user.isPrivate()) {
+            throw new ConflictException("User already private");
+        }
+        user.setPrivate(true);
+        userRepository.save(user);
+    }
+
+    public void setPublicUser(UserDetails userDetails) {
+        User user = findUserByUsername(userDetails.getUsername());
+        if (!user.isPrivate()) {
+            throw new ConflictException("User already public");
+        }
+        user.setPrivate(false);
+        userRepository.save(user);
+    }
+
+    public boolean isPrivate(String username) {
+        User user = findUserByUsername(username);
+        return user.isPrivate();
     }
 }

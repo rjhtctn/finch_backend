@@ -6,6 +6,7 @@ import lombok.Data;
 
 @Data
 public class ResetPasswordRequestDto {
+
     @NotBlank
     private String token;
 

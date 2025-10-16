@@ -1,10 +1,12 @@
 package com.rjhtctn.finch_backend.task;
 
 import com.rjhtctn.finch_backend.service.ValidTokenService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Component
 public class TokenCleanupTask {
 
@@ -17,8 +19,8 @@ public class TokenCleanupTask {
     @Scheduled(cron = "0 0 4 * * ?")
     @Transactional
     public void purgeExpiredTokens() {
-        System.out.println("Running expired token cleanup task...");
+        log.info("Starting expired token cleanup task...");
         validTokenService.purgeExpiredTokens();
-        System.out.println("Expired token cleanup task finished.");
+        log.info("Expired token cleanup task finished.");
     }
 }

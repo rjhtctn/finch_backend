@@ -5,6 +5,7 @@ import com.rjhtctn.finch_backend.model.Finch;
 import com.rjhtctn.finch_backend.model.Like;
 import com.rjhtctn.finch_backend.model.User;
 import com.rjhtctn.finch_backend.repository.LikeRepository;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import java.util.List;
@@ -17,16 +18,30 @@ public class LikeService {
     private final LikeRepository likeRepository;
     private final UserService userService;
     private final FinchService finchService;
+    private final FollowService followService;
 
-    public LikeService(LikeRepository likeRepository, UserService userService, FinchService finchService) {
+    public LikeService(LikeRepository likeRepository,
+                       UserService userService,
+                       FinchService finchService,
+                       FollowService followService) {
         this.likeRepository = likeRepository;
         this.userService = userService;
         this.finchService = finchService;
+        this.followService = followService;
     }
 
     public void likeFinch(UUID finchId, UserDetails userDetails) {
         User user = userService.findUserByUsername(userDetails.getUsername());
         Finch finch = finchService.findFinchById(finchId);
+        User owner = finch.getUser();
+
+        if (owner.isPrivate() && !owner.getId().equals(user.getId())) {
+            boolean isFollowing = followService.getFollowing(user).stream()
+                    .anyMatch(f -> f.getId().equals(owner.getId()));
+            if (!isFollowing) {
+                throw new AccessDeniedException("You cannot like a private user's finch.");
+            }
+        }
 
         if (likeRepository.findByUserAndFinch(user, finch).isPresent()) {
             throw new ConflictException("You have already liked this finch.");
@@ -46,22 +61,19 @@ public class LikeService {
         likeRepository.delete(likeToDelete);
     }
 
+
     public int getLikeCountForFinch(Finch finch) {
         return likeRepository.countByFinch(finch);
     }
 
     public List<User> getUsersForLikedFinch(Finch finch) {
-        List<Like> likes = likeRepository.findAllByFinch(finch);
-
-        return likes.stream()
+        return likeRepository.findAllByFinch(finch).stream()
                 .map(Like::getUser)
                 .collect(Collectors.toList());
     }
 
     public List<Finch> getLikedFinchesForUser(User user) {
-        List<Like> likes = likeRepository.findAllByUser(user);
-
-        return likes.stream()
+        return likeRepository.findAllByUser(user).stream()
                 .map(Like::getFinch)
                 .collect(Collectors.toList());
     }

@@ -7,7 +7,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.Date;
 
-
 @Service
 public class ValidTokenService {
 
@@ -17,17 +16,18 @@ public class ValidTokenService {
         this.validTokenRepository = validTokenRepository;
     }
 
+    @Transactional
     public void createTokenRecord(String jwtId, User user, Date createdAt, Date expiresAt) {
-        ValidToken validToken = new ValidToken(jwtId, user,  createdAt, expiresAt);
-        validTokenRepository.save(validToken);
+        ValidToken token = new ValidToken(jwtId, user, createdAt, expiresAt);
+        validTokenRepository.save(token);
     }
 
+    @Transactional(readOnly = true)
     public boolean isTokenValidInDatabase(String jwtId) {
-
-        System.out.println(validTokenRepository.findByJwtId(jwtId).isPresent());
         return validTokenRepository.findByJwtId(jwtId).isPresent();
     }
 
+    @Transactional
     public void invalidateToken(String jwtId) {
         validTokenRepository.findByJwtId(jwtId).ifPresent(validTokenRepository::delete);
     }
@@ -39,6 +39,8 @@ public class ValidTokenService {
 
     @Transactional
     public void purgeExpiredTokens() {
+        int before = (int) validTokenRepository.count();
         validTokenRepository.deleteAllByExpiresAtBefore(new Date());
+        int after = (int) validTokenRepository.count();
     }
 }

@@ -19,6 +19,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -38,91 +39,88 @@ public class FinchService {
         this.likeService = likeService;
     }
 
-    public FinchResponseDto createFinch(CreateFinchRequestDto createFinchRequestDto, UserDetails userDetails) {
+    @Transactional
+    public FinchResponseDto createFinch(CreateFinchRequestDto dto, UserDetails userDetails) {
+        User author = userService.findUserByUsername(userDetails.getUsername());
+
+        Finch finch = new Finch();
+        finch.setContent(dto.getContent());
+        finch.setUser(author);
+
+        Finch saved = finchRepository.save(finch);
+        return FinchMapper.toFinchResponse(saved);
+    }
+
+    @Transactional
+    public FinchResponseDto updateFinch(UUID finchId, UpdateFinchRequestDto dto, UserDetails userDetails) {
+        Finch finch = finchRepository.findById(finchId)
+                .orElseThrow(() -> new ResourceNotFoundException("Finch not found with id: " + finchId));
+
         String username = userDetails.getUsername();
-        User author = userService.findUserByUsername(username);
+        if (!finch.getUser().getUsername().equals(username)) {
+            throw new AccessDeniedException("You are not authorized to update this Finch.");
+        }
 
-        Finch newFinch = new Finch();
-        newFinch.setContent(createFinchRequestDto.getContent());
-        newFinch.setUser(author);
-
-        Finch savedFinch = finchRepository.save(newFinch);
-
-        return FinchMapper.toFinchResponse(savedFinch);
+        finch.setContent(dto.getContent());
+        Finch updated = finchRepository.save(finch);
+        return FinchMapper.toFinchResponse(updated);
     }
 
+    @Transactional
     public void deleteFinch(UUID finchId, UserDetails userDetails) {
-        Finch finchToDelete = finchRepository.findById(finchId)
+        Finch finch = finchRepository.findById(finchId)
                 .orElseThrow(() -> new ResourceNotFoundException("Finch not found with id: " + finchId));
 
-        String requestingUsername = userDetails.getUsername();
-
-        String authorUsername = finchToDelete.getUser().getUsername();
-
-        if (!requestingUsername.equals(authorUsername)) {
-            throw new AccessDeniedException("You are not authorized to delete this finch.");
+        String username = userDetails.getUsername();
+        if (!finch.getUser().getUsername().equals(username)) {
+            throw new AccessDeniedException("You are not authorized to delete this Finch.");
         }
 
-        finchRepository.delete(finchToDelete);
+        finchRepository.delete(finch);
     }
 
-    public FinchResponseDto updateFinch(UUID finchId, UpdateFinchRequestDto request, UserDetails userDetails) {
-        Finch finchToUpdate = finchRepository.findById(finchId)
-                .orElseThrow(() -> new ResourceNotFoundException("Finch not found with id: " + finchId));
-
-        String requestingUsername = userDetails.getUsername();
-        String authorUsername = finchToUpdate.getUser().getUsername();
-
-        if (!requestingUsername.equals(authorUsername)) {
-            throw new AccessDeniedException("You are not authorized to update this finch.");
-        }
-
-        finchToUpdate.setContent(request.getContent());
-        Finch updatedFinch = finchRepository.save(finchToUpdate);
-
-        return FinchMapper.toFinchResponse(updatedFinch);
-    }
-
-    public List<FinchResponseDto> getAllFinches() {
-        List<Finch> finches = finchRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
-
-        return finches.stream()
-                .filter(finch -> !finch.getUser().isPrivate())
-                .map(this::mapToFinchResponse)
-                .collect(Collectors.toList());
-    }
-
+    @Transactional(readOnly = true)
     public Finch findFinchById(UUID finchId) {
         return finchRepository.findById(finchId)
                 .orElseThrow(() -> new ResourceNotFoundException("Finch not found with id: " + finchId));
     }
 
+    @Transactional(readOnly = true)
     public FinchResponseDto getFinchById(UUID finchId) {
         Finch finch = findFinchById(finchId);
         if (finch.getUser().isPrivate()) {
-            throw new ConflictException("User is private.");
+            throw new ConflictException("This user's account is private.");
         }
         return mapToFinchResponse(finch);
     }
 
+    @Transactional(readOnly = true)
+    public List<FinchResponseDto> getAllFinches() {
+        return finchRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"))
+                .stream()
+                .filter(f -> !f.getUser().isPrivate())
+                .map(this::mapToFinchResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
     public List<FinchResponseDto> getFinchesByUsername(String username) {
-        List<Finch> finches = finchRepository.
-                findByUser_Username(username, Sort.by(Sort.Direction.DESC, "createdAt"));
-
-        return finches.stream()
-                .filter(finch -> !finch.getUser().isPrivate())
+        return finchRepository.findByUser_Username(username, Sort.by(Sort.Direction.DESC, "createdAt"))
+                .stream()
+                .filter(f -> !f.getUser().isPrivate())
                 .map(this::mapToFinchResponse)
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<FinchResponseDto> getLikedFinchesByUser(User user) {
-        List<Finch> likedFinches = likeService.getLikedFinchesForUser(user);
-
-        return likedFinches.stream()
+        return likeService.getLikedFinchesForUser(user)
+                .stream()
                 .map(this::mapToFinchResponse)
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public Page<FinchResponseDto> getTimeline(UserDetails userDetails, Pageable pageable) {
         User currentUser = userService.findUserByUsername(userDetails.getUsername());
 
@@ -132,25 +130,20 @@ public class FinchService {
 
         followingUsers.add(currentUser);
 
-        Page<Finch> finchPage = finchRepository.findByUserIn(followingUsers, pageable);
-
-        return finchPage.map(this::mapToFinchResponse);
+        Page<Finch> page = finchRepository.findByUserIn(followingUsers, pageable);
+        return page.map(this::mapToFinchResponse);
     }
 
     private FinchResponseDto mapToFinchResponse(Finch finch) {
         int likeCount = likeService.getLikeCountForFinch(finch);
-
-        List<User> likedUsers = likeService.getUsersForLikedFinch(finch);
-
-        FinchResponseDto response = FinchMapper.toFinchResponse(finch);
-
-        response.setLikeCount(likeCount);
-
-        List<UserResponseDto> likedUsersDto = likedUsers.stream()
-                        .map(UserMapper::toUserResponse)
+        List<UserResponseDto> likedUsers = likeService.getUsersForLikedFinch(finch)
+                .stream()
+                .map(UserMapper::toUserResponse)
                 .collect(Collectors.toList());
-        response.setLikedUsers(likedUsersDto);
 
-        return response;
+        FinchResponseDto dto = FinchMapper.toFinchResponse(finch);
+        dto.setLikeCount(likeCount);
+        dto.setLikedUsers(likedUsers);
+        return dto;
     }
 }

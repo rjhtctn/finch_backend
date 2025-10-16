@@ -6,11 +6,11 @@ import com.rjhtctn.finch_backend.exception.ConflictException;
 import com.rjhtctn.finch_backend.exception.ResourceNotFoundException;
 import com.rjhtctn.finch_backend.mapper.UserMapper;
 import com.rjhtctn.finch_backend.model.User;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import com.rjhtctn.finch_backend.repository.UserRepository;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
@@ -37,36 +37,37 @@ public class UserService {
         this.validTokenService = validTokenService;
     }
 
+    @Transactional(readOnly = true)
     public User findUserByUsername(String username) {
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with username: " + username));
     }
 
+    @Transactional(readOnly = true)
     public List<UserResponseDto> getAllUsers() {
-        List<User> users = userRepository.findAll();
-
-        return users.stream()
+        return userRepository.findAll().stream()
                 .filter(user -> !user.isPrivate())
                 .map(UserMapper::toUserResponse)
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public UserProfileResponseDto getOneUser(String username) {
         User user = findUserByUsername(username);
-        if (user.isPrivate()) {
-            throw new ConflictException("User is private");
-        }
+        checkPrivateAccess(user);
         return UserMapper.toUserProfileResponse(user);
     }
 
+    @Transactional
     public UserMeResponseDto updateUserProfile(String username, UpdateUserProfileRequestDto request) {
-        User userToUpdate = findUserByUsername(username);
-        UserMapper.updateUserFromDto(userToUpdate, request);
-        User updatedUser = userRepository.save(userToUpdate);
-        return UserMapper.toUserMeResponse(updatedUser);
+        User user = findUserByUsername(username);
+        UserMapper.updateUserFromDto(user, request);
+        userRepository.save(user);
+
+        return UserMapper.toUserMeResponse(user);
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional
     public void changePassword(UserDetails userDetails, ChangePasswordRequestDto request) {
         User user = findUserByUsername(userDetails.getUsername());
 
@@ -75,91 +76,98 @@ public class UserService {
         }
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
-
         userRepository.save(user);
         validTokenService.invalidateAllTokensForUser(user);
+
     }
 
+    @Transactional
     public void deleteUser(UserDetails userDetails) {
-        User userToDelete =  findUserByUsername(userDetails.getUsername());
-
-        userRepository.delete(userToDelete);
+        User user = findUserByUsername(userDetails.getUsername());
+        userRepository.delete(user);
     }
 
+    @Transactional(readOnly = true)
     public UserMeResponseDto getMyProfile(UserDetails userDetails) {
-        User user =  findUserByUsername(userDetails.getUsername());
-
-        return UserMapper.toUserMeResponse(user);
+        return UserMapper.toUserMeResponse(findUserByUsername(userDetails.getUsername()));
     }
 
+    @Transactional(readOnly = true)
     public List<FinchResponseDto> getFinchesOfUser(String username) {
-        if (isPrivate(username)) {
-            throw new ConflictException("User is private");
-        }
+        User user = findUserByUsername(username);
+        checkPrivateAccess(user);
         return finchService.getFinchesByUsername(username);
     }
 
+    @Transactional(readOnly = true)
     public List<FinchResponseDto> getMyFinches(UserDetails userDetails) {
-        String username = userDetails.getUsername();
-        return finchService.getFinchesByUsername(username);
+        return finchService.getFinchesByUsername(userDetails.getUsername());
     }
 
+    @Transactional(readOnly = true)
     public List<UserResponseDto> getFollowers(String username) {
         User user = findUserByUsername(username);
-        if (user.isPrivate()) {
-            throw new ConflictException("User is private");
-        }
+        checkPrivateAccess(user);
         return followService.getFollowers(user);
     }
 
+    @Transactional(readOnly = true)
     public List<UserResponseDto> getFollowing(String username) {
         User user = findUserByUsername(username);
-        if (user.isPrivate()) {
-            throw new ConflictException("User is private");
-        }
+        checkPrivateAccess(user);
         return followService.getFollowing(user);
     }
 
+    @Transactional(readOnly = true)
     public List<UserResponseDto> getMyFollowers(UserDetails userDetails) {
         return getFollowers(userDetails.getUsername());
     }
 
+    @Transactional(readOnly = true)
     public List<UserResponseDto> getMyFollowing(UserDetails userDetails) {
         return getFollowing(userDetails.getUsername());
     }
 
+    @Transactional(readOnly = true)
     public List<FinchResponseDto> getLikedFinchesByUsername(String username) {
         User user = findUserByUsername(username);
-        if (user.isPrivate()) {
-            throw new ConflictException("User is private");
-        }
+        checkPrivateAccess(user);
         return finchService.getLikedFinchesByUser(user);
     }
 
+    @Transactional(readOnly = true)
     public List<FinchResponseDto> getMyLikedFinches(UserDetails userDetails) {
         return getLikedFinchesByUsername(userDetails.getUsername());
     }
 
+    @Transactional
     public void setPrivateUser(UserDetails userDetails) {
         User user = findUserByUsername(userDetails.getUsername());
-        if  (user.isPrivate()) {
-            throw new ConflictException("User already private");
+        if (user.isPrivate()) {
+            throw new ConflictException("User is already private.");
         }
         user.setPrivate(true);
         userRepository.save(user);
     }
 
+    @Transactional
     public void setPublicUser(UserDetails userDetails) {
         User user = findUserByUsername(userDetails.getUsername());
         if (!user.isPrivate()) {
-            throw new ConflictException("User already public");
+            throw new ConflictException("User is already public.");
         }
         user.setPrivate(false);
         userRepository.save(user);
     }
 
+    @Transactional(readOnly = true)
     public boolean isPrivate(String username) {
-        User user = findUserByUsername(username);
-        return user.isPrivate();
+        return findUserByUsername(username).isPrivate();
+    }
+
+    private void checkPrivateAccess(User user) {
+        if (user.isPrivate()) {
+            throw new ConflictException("This user's profile is private.");
+        }
     }
 }

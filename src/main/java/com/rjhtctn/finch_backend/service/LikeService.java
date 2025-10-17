@@ -77,4 +77,9 @@ public class LikeService {
                 .map(Like::getFinch)
                 .collect(Collectors.toList());
     }
+
+    public boolean isLikedByUser(Finch finch, User user) {
+        if (finch == null || user == null) return false;
+        return likeRepository.findByUserAndFinch(user, finch).isPresent();
+    }
 }

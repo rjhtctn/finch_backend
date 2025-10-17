@@ -12,8 +12,13 @@ public class FinchResponseDto {
     private String content;
     private LocalDateTime createdAt;
     private UserResponseDto author;
+
     private long likeCount;
     private int replyCount;
+
     private List<FinchResponseDto> replies;
+
     private UUID parentId;
+
+    private boolean currentUserLiked;
 }

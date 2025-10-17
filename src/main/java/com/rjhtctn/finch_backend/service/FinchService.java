@@ -49,7 +49,7 @@ public class FinchService {
         finch.setContent(dto.getContent());
         finch.setUser(author);
         Finch saved = finchRepository.save(finch);
-        return enrichCounters(FinchMapper.toFinchResponseWithoutReplies(saved));
+        return enrichCounters(FinchMapper.toFinchResponseWithoutReplies(saved), author);
     }
 
     @Transactional
@@ -57,7 +57,8 @@ public class FinchService {
         Finch finch = findOwnedFinch(finchId, userDetails);
         finch.setContent(dto.getContent());
         Finch updated = finchRepository.save(finch);
-        return enrichCounters(FinchMapper.toFinchResponseWithoutReplies(updated));
+        return enrichCounters(FinchMapper.toFinchResponseWithoutReplies(updated),
+                userService.findUserByUsername(userDetails.getUsername()));
     }
 
     @Transactional
@@ -96,12 +97,14 @@ public class FinchService {
 
         dto.setLikeCount(likeService.getLikeCountForFinch(finch));
         dto.setReplyCount(finch.getReplies() != null ? finch.getReplies().size() : 0);
+        dto.setCurrentUserLiked(likeService.isLikedByUser(finch, currentUser));
 
-        if (dto.getReplies() != null && depth > 1) {
+        if (dto.getReplies() != null && depth > 0) {
             dto.getReplies().forEach(r -> {
                 Finch replyEntity = findFinchById(r.getId());
                 r.setLikeCount(likeService.getLikeCountForFinch(replyEntity));
                 r.setReplyCount(replyEntity.getReplies() != null ? replyEntity.getReplies().size() : 0);
+                r.setCurrentUserLiked(likeService.isLikedByUser(replyEntity, currentUser));
             });
         }
 
@@ -124,6 +127,7 @@ public class FinchService {
                     FinchResponseDto dto = FinchMapper.toFinchResponseWithoutReplies(f);
                     dto.setLikeCount(likeService.getLikeCountForFinch(f));
                     dto.setReplyCount(f.getReplies() != null ? f.getReplies().size() : 0);
+                    dto.setCurrentUserLiked(likeService.isLikedByUser(f, currentUser));
                     return dto;
                 })
                 .collect(Collectors.toList());
@@ -143,6 +147,7 @@ public class FinchService {
                     FinchResponseDto dto = FinchMapper.toFinchResponseWithoutReplies(f);
                     dto.setLikeCount(likeService.getLikeCountForFinch(f));
                     dto.setReplyCount(f.getReplies() != null ? f.getReplies().size() : 0);
+                    dto.setCurrentUserLiked(likeService.isLikedByUser(f, currentUser));
                     return dto;
                 })
                 .collect(Collectors.toList());
@@ -152,8 +157,7 @@ public class FinchService {
     public List<FinchResponseDto> getLikedFinchesByUser(User user) {
         return likeService.getLikedFinchesForUser(user)
                 .stream()
-                .map(FinchMapper::toFinchResponseWithoutReplies)
-                .map(this::enrichCounters)
+                .map(f -> enrichCounters(FinchMapper.toFinchResponseWithoutReplies(f), user))
                 .collect(Collectors.toList());
     }
 
@@ -166,7 +170,8 @@ public class FinchService {
         followingUsers.add(currentUser);
 
         Page<Finch> page = finchRepository.findByUserIn(followingUsers, pageable);
-        return page.map(f -> enrichCounters(FinchMapper.toFinchResponseWithoutReplies(f)));    }
+        return page.map(f -> enrichCounters(FinchMapper.toFinchResponseWithoutReplies(f), currentUser));
+    }
 
     @Transactional
     public FinchResponseDto replyToFinch(UUID parentId, CreateFinchRequestDto dto, UserDetails userDetails) {
@@ -187,7 +192,7 @@ public class FinchService {
         reply.setParentFinch(parent);
 
         Finch saved = finchRepository.save(reply);
-        return enrichCounters(FinchMapper.toFinchResponseWithoutReplies(saved));
+        return enrichCounters(FinchMapper.toFinchResponseWithoutReplies(saved), author);
     }
 
     @Transactional(readOnly = true)
@@ -200,10 +205,11 @@ public class FinchService {
     }
 
     @Transactional(readOnly = true)
-    protected FinchResponseDto enrichCounters(FinchResponseDto dto) {
+    protected FinchResponseDto enrichCounters(FinchResponseDto dto, User currentUser) {
         Finch finch = findFinchById(dto.getId());
         dto.setLikeCount(likeService.getLikeCountForFinch(finch));
         dto.setReplyCount(finch.getReplies() != null ? finch.getReplies().size() : 0);
+        dto.setCurrentUserLiked(likeService.isLikedByUser(finch, currentUser));
         return dto;
     }
 }

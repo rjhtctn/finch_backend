@@ -9,14 +9,18 @@ import java.util.stream.Collectors;
 public class FinchMapper {
 
     public static FinchResponseDto toFinchResponse(Finch finch) {
+        return toFinchResponseWithDepth(finch, 1);
+    }
+
+    private static FinchResponseDto toFinchResponseWithDepth(Finch finch, int depth) {
         if (finch == null) return null;
 
         FinchResponseDto dto = toFinchResponseWithoutReplies(finch);
 
-        if (finch.getReplies() != null && !finch.getReplies().isEmpty()) {
+        if (depth < 2 && finch.getReplies() != null && !finch.getReplies().isEmpty()) {
             List<FinchResponseDto> replies = finch.getReplies().stream()
                     .sorted(Comparator.comparing(Finch::getCreatedAt))
-                    .map(FinchMapper::toFinchResponseWithoutReplies)
+                    .map(r -> toFinchResponseWithDepth(r, depth + 1)) // recursive
                     .collect(Collectors.toList());
             dto.setReplies(replies);
         }
@@ -30,11 +34,9 @@ public class FinchMapper {
         dto.setContent(finch.getContent());
         dto.setCreatedAt(finch.getCreatedAt());
         dto.setAuthor(UserMapper.toUserResponse(finch.getUser()));
-
-        if (finch.getParentFinch() != null)
+        if (finch.getParentFinch() != null) {
             dto.setParentId(finch.getParentFinch().getId());
-
-        dto.setReplyCount(finch.getReplies() != null ? finch.getReplies().size() : 0);
+        }
         return dto;
     }
 }

@@ -27,45 +27,34 @@ public class FinchController {
 
     @PostMapping
     public ResponseEntity<FinchResponseDto> createFinch(
-            @RequestBody CreateFinchRequestDto createFinchRequestDto,
+            @RequestBody @Valid CreateFinchRequestDto dto,
             @AuthenticationPrincipal UserDetails userDetails) {
-
-        FinchResponseDto createdFinch = finchService.createFinch(createFinchRequestDto, userDetails);
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdFinch);
-    }
-
-    @GetMapping
-    public ResponseEntity<List<FinchResponseDto>> getAllFinches(@AuthenticationPrincipal  UserDetails userDetails) {
-        List<FinchResponseDto> finches = finchService.getAllFinches(userDetails);
-        return ResponseEntity.ok(finches);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(finchService.createFinch(dto, userDetails));
     }
 
     @GetMapping("/{finchId}")
-    public ResponseEntity<FinchResponseDto> getFinchById(@PathVariable UUID finchId,
-                                                         @RequestParam(defaultValue = "2") int depth,
-                                                         @AuthenticationPrincipal UserDetails userDetails) {
-        FinchResponseDto finch = finchService.getFinchById(finchId, userDetails, depth);
-        return ResponseEntity.ok(finch);
+    public ResponseEntity<FinchResponseDto> getFinchById(
+            @PathVariable UUID finchId,
+            @RequestParam(defaultValue = "2") int depth,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(finchService.getFinchById(finchId, userDetails, depth));
+    }
+
+    @PutMapping("/{finchId}")
+    public ResponseEntity<FinchResponseDto> updateFinch(
+            @PathVariable UUID finchId,
+            @RequestBody @Valid UpdateFinchRequestDto dto,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(finchService.updateFinch(finchId, dto, userDetails));
     }
 
     @DeleteMapping("/{finchId}")
     public ResponseEntity<Void> deleteFinch(
             @PathVariable UUID finchId,
             @AuthenticationPrincipal UserDetails userDetails) {
-
         finchService.deleteFinch(finchId, userDetails);
         return ResponseEntity.noContent().build();
-    }
-
-    @PutMapping("/{finchId}")
-    public ResponseEntity<FinchResponseDto> updateFinch(
-            @PathVariable UUID finchId,
-            @RequestBody UpdateFinchRequestDto request,
-            @AuthenticationPrincipal UserDetails userDetails) {
-
-        FinchResponseDto updatedFinch = finchService.updateFinch(finchId, request, userDetails);
-        return ResponseEntity.ok(updatedFinch);
     }
 
     @PostMapping("/{parentId}/reply")
@@ -73,14 +62,19 @@ public class FinchController {
             @PathVariable UUID parentId,
             @RequestBody @Valid CreateFinchRequestDto dto,
             @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(finchService.replyToFinch(parentId, dto, userDetails));
+    }
 
-        FinchResponseDto response = finchService.replyToFinch(parentId, dto, userDetails);
-        return ResponseEntity.ok(response);
+    @PostMapping("/{finchId}/quote")
+    public ResponseEntity<FinchResponseDto> quoteFinch(
+            @PathVariable UUID finchId,
+            @RequestBody @Valid CreateFinchRequestDto dto,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(finchService.quoteFinch(finchId, dto, userDetails));
     }
 
     @GetMapping("/{finchId}/likes")
     public ResponseEntity<List<UserResponseDto>> getLikedUsersOfFinch(@PathVariable UUID finchId) {
-        List<UserResponseDto> likedUsers = finchService.getLikedUsersOfFinch(finchId);
-        return ResponseEntity.ok(likedUsers);
+        return ResponseEntity.ok(finchService.getLikedUsersOfFinch(finchId));
     }
 }

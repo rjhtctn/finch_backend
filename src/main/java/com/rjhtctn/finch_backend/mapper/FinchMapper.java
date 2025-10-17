@@ -15,9 +15,7 @@ public class FinchMapper {
         if (depth > 0 && finch.getReplies() != null && !finch.getReplies().isEmpty()) {
             List<FinchResponseDto> replies = finch.getReplies().stream()
                     .sorted(Comparator.comparing(Finch::getCreatedAt))
-                    .map(r -> {
-                        return toFinchResponse(r, depth - 1);
-                    })
+                    .map(r -> toFinchResponse(r, depth - 1))
                     .collect(Collectors.toList());
             dto.setReplies(replies);
         }

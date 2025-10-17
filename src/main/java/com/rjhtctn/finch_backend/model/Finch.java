@@ -46,6 +46,10 @@ public class Finch {
     @JoinColumn(name = "parent_id")
     private Finch parentFinch;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "quoted_finch_id")
+    private Finch quotedFinch;
+
     @OneToMany(mappedBy = "parentFinch", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Finch> replies = new ArrayList<>();
 }

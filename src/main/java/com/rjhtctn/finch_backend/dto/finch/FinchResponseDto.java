@@ -18,7 +18,12 @@ public class FinchResponseDto {
 
     private List<FinchResponseDto> replies;
 
+    private long repostCount;
+    private FinchResponseDto quotedFinch;
+
     private UUID parentId;
 
     private boolean currentUserLiked;
+
+    private String repostedBy;
 }

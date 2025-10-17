@@ -9,12 +9,9 @@ import com.rjhtctn.finch_backend.exception.ResourceNotFoundException;
 import com.rjhtctn.finch_backend.mapper.FinchMapper;
 import com.rjhtctn.finch_backend.mapper.UserMapper;
 import com.rjhtctn.finch_backend.model.Finch;
-import com.rjhtctn.finch_backend.model.Follow;
 import com.rjhtctn.finch_backend.model.User;
 import com.rjhtctn.finch_backend.repository.FinchRepository;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -31,15 +28,18 @@ public class FinchService {
     private final UserService userService;
     private final LikeService likeService;
     private final FollowService followService;
+    private final RefinchService refinchService;
 
     public FinchService(FinchRepository finchRepository,
                         UserService userService,
                         @Lazy LikeService likeService,
-                        FollowService followService) {
+                        FollowService followService,
+                        RefinchService refinchService) {
         this.finchRepository = finchRepository;
         this.userService = userService;
         this.likeService = likeService;
         this.followService = followService;
+        this.refinchService = refinchService;
     }
 
     @Transactional
@@ -112,28 +112,6 @@ public class FinchService {
     }
 
     @Transactional(readOnly = true)
-    public List<FinchResponseDto> getAllFinches(UserDetails userDetails) {
-        User currentUser = userService.findUserByUsername(userDetails.getUsername());
-
-        return finchRepository.findByParentFinchIsNull(Sort.by(Sort.Direction.DESC, "createdAt"))
-                .stream()
-                .filter(f -> {
-                    User author = f.getUser();
-                    boolean isSelf = author.getId().equals(currentUser.getId());
-                    boolean isFollower = followService.isFollowing(currentUser, author);
-                    return !author.isPrivate() || isSelf || isFollower;
-                })
-                .map(f -> {
-                    FinchResponseDto dto = FinchMapper.toFinchResponseWithoutReplies(f);
-                    dto.setLikeCount(likeService.getLikeCountForFinch(f));
-                    dto.setReplyCount(f.getReplies() != null ? f.getReplies().size() : 0);
-                    dto.setCurrentUserLiked(likeService.isLikedByUser(f, currentUser));
-                    return dto;
-                })
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
     public List<FinchResponseDto> getFinchesByUsername(String username, UserDetails userDetails) {
         User targetUser = userService.findUserByUsername(username);
         User currentUser = userService.findUserByUsername(userDetails.getUsername());
@@ -148,6 +126,7 @@ public class FinchService {
                     dto.setLikeCount(likeService.getLikeCountForFinch(f));
                     dto.setReplyCount(f.getReplies() != null ? f.getReplies().size() : 0);
                     dto.setCurrentUserLiked(likeService.isLikedByUser(f, currentUser));
+                    dto.setRepostCount(refinchService.getRepostCount(f.getId()));
                     return dto;
                 })
                 .collect(Collectors.toList());
@@ -159,18 +138,6 @@ public class FinchService {
                 .stream()
                 .map(f -> enrichCounters(FinchMapper.toFinchResponseWithoutReplies(f), user))
                 .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public Page<FinchResponseDto> getTimeline(UserDetails userDetails, Pageable pageable) {
-        User currentUser = userService.findUserByUsername(userDetails.getUsername());
-        List<User> followingUsers = currentUser.getFollowing().stream()
-                .map(Follow::getFollowing)
-                .collect(Collectors.toList());
-        followingUsers.add(currentUser);
-
-        Page<Finch> page = finchRepository.findByUserIn(followingUsers, pageable);
-        return page.map(f -> enrichCounters(FinchMapper.toFinchResponseWithoutReplies(f), currentUser));
     }
 
     @Transactional
@@ -186,12 +153,36 @@ public class FinchService {
             throw new AccessDeniedException("You cannot reply to a private user's Finch.");
         }
 
+        if (refinchService.isRepost(parent)) {
+            throw new ConflictException("You cannot reply to a repost.");
+        }
+
         Finch reply = new Finch();
         reply.setContent(dto.getContent());
         reply.setUser(author);
         reply.setParentFinch(parent);
 
         Finch saved = finchRepository.save(reply);
+        return enrichCounters(FinchMapper.toFinchResponseWithoutReplies(saved), author);
+    }
+
+    @Transactional
+    public FinchResponseDto quoteFinch(UUID quotedId, CreateFinchRequestDto dto, UserDetails userDetails) {
+        Finch quoted = findFinchById(quotedId);
+        User author = userService.findUserByUsername(userDetails.getUsername());
+
+        if (quoted.getUser().isPrivate()
+                && !quoted.getUser().getId().equals(author.getId())
+                && !followService.isFollowing(author, quoted.getUser())) {
+            throw new ConflictException("This user's account is private.");
+        }
+
+        Finch quote = new Finch();
+        quote.setUser(author);
+        quote.setContent(dto.getContent());
+        quote.setQuotedFinch(quoted);
+
+        Finch saved = finchRepository.save(quote);
         return enrichCounters(FinchMapper.toFinchResponseWithoutReplies(saved), author);
     }
 
@@ -210,6 +201,7 @@ public class FinchService {
         dto.setLikeCount(likeService.getLikeCountForFinch(finch));
         dto.setReplyCount(finch.getReplies() != null ? finch.getReplies().size() : 0);
         dto.setCurrentUserLiked(likeService.isLikedByUser(finch, currentUser));
+        dto.setRepostCount(refinchService.getRepostCount(finch.getId()));
         return dto;
     }
 }

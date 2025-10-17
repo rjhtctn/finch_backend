@@ -16,7 +16,7 @@ public interface FinchRepository extends JpaRepository<Finch, UUID> {
 
     List<Finch> findByUser_Username(String username, Sort sort);
 
-    Page<Finch> findByUserIn(List<User> users, Pageable pageable);
-
     List<Finch> findByParentFinchIsNull(Sort sort);
+
+    List<Finch> findByUser_UsernameIn(List<String> usernames, Sort sort);
 }

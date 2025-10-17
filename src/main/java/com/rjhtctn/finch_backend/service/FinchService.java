@@ -34,7 +34,7 @@ public class FinchService {
                         UserService userService,
                         @Lazy LikeService likeService,
                         FollowService followService,
-                        RefinchService refinchService) {
+                        @Lazy RefinchService refinchService) {
         this.finchRepository = finchRepository;
         this.userService = userService;
         this.likeService = likeService;

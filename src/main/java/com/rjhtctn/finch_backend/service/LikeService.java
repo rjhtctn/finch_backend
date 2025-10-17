@@ -61,7 +61,6 @@ public class LikeService {
         likeRepository.delete(likeToDelete);
     }
 
-
     public int getLikeCountForFinch(Finch finch) {
         return likeRepository.countByFinch(finch);
     }

@@ -19,6 +19,7 @@ public class UserMapper {
         dto.setFirstName(user.getFirstName());
         dto.setLastName(user.getLastName());
         dto.setProfileImageUrl(user.getProfileImageUrl());
+        dto.setPrivate(user.isPrivate());
 
         return dto;
     }
@@ -39,6 +40,7 @@ public class UserMapper {
         dto.setProfileImageUrl(user.getProfileImageUrl());
         dto.setBannerImageUrl(user.getBannerImageUrl());
         dto.setCreatedAt(user.getCreatedAt());
+        dto.setPrivate(user.isPrivate());
 
         return dto;
     }
@@ -79,6 +81,7 @@ public class UserMapper {
         dto.setBannerImageUrl(user.getBannerImageUrl());
         dto.setCreatedAt(user.getCreatedAt());
         dto.setUpdatedAt(user.getUpdatedAt());
+        dto.setPrivate(user.isPrivate());
 
         return dto;
 

@@ -6,8 +6,10 @@ import com.rjhtctn.finch_backend.mapper.UserMapper;
 import com.rjhtctn.finch_backend.model.Follow;
 import com.rjhtctn.finch_backend.model.User;
 import com.rjhtctn.finch_backend.repository.FollowRepository;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -16,26 +18,48 @@ public class FollowService {
 
     private final UserService userService;
     private final FollowRepository followRepository;
+    private final FollowRequestService followRequestService;
 
-    public FollowService(UserService userService, FollowRepository followRepository) {
+    public FollowService(UserService userService,
+                         FollowRepository followRepository,
+                         @Lazy FollowRequestService followRequestService) {
         this.userService = userService;
         this.followRepository = followRepository;
+        this.followRequestService = followRequestService;
     }
 
-    public void followUser(String usernameToFollow, UserDetails currentUserDetails) {
-        User follower = findUserByUsername(currentUserDetails.getUsername());
-        User following = findUserByUsername(usernameToFollow);
+    @Transactional
+    public String followUser(String targetUsername, UserDetails userDetails) {
+        User follower = userService.findUserByUsername(userDetails.getUsername());
+        User following = userService.findUserByUsername(targetUsername);
 
-        if (follower.getId().equals(following.getId())) {
+        if (follower.equals(following)) {
             throw new ConflictException("You cannot follow yourself.");
         }
 
-        if (followRepository.findByFollowerAndFollowing(follower, following).isPresent()) {
-            throw new ConflictException("You are already following this user.");
+        if (isFollowing(follower, following)) {
+            throw new ConflictException("You already follow this user.");
         }
 
-        Follow newFollow = new Follow(follower, following);
-        followRepository.save(newFollow);
+        if (following.isPrivate()) {
+            followRequestService.sendRequest(follower, following);
+            return "requested";
+        }
+
+        Follow follow = new Follow();
+        follow.setFollower(follower);
+        follow.setFollowing(following);
+        followRepository.save(follow);
+        return "followed";
+    }
+
+    @Transactional
+    public void createFollow(User follower, User following) {
+        if (isFollowing(follower, following)) return;
+        Follow follow = new Follow();
+        follow.setFollower(follower);
+        follow.setFollowing(following);
+        followRepository.save(follow);
     }
 
     public void unfollowUser(String usernameToUnfollow, UserDetails currentUserDetails) {

@@ -16,4 +16,5 @@ public class UserProfileResponseDto {
     private String profileImageUrl;
     private String bannerImageUrl;
     private LocalDateTime createdAt;
+    private boolean isPrivate;
 }

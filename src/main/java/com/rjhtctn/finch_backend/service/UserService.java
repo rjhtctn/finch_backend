@@ -46,15 +46,13 @@ public class UserService {
     @Transactional(readOnly = true)
     public List<UserResponseDto> getAllUsers() {
         return userRepository.findAll().stream()
-                .filter(u -> !u.isPrivate())
                 .map(UserMapper::toUserResponse)
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
-    public UserProfileResponseDto getOneUser(String username, UserDetails requester) {
+    public UserProfileResponseDto getOneUser(String username) {
         User user = findUserByUsername(username);
-        checkPrivateAccess(user, requester);
         return UserMapper.toUserProfileResponse(user);
     }
 

@@ -18,4 +18,5 @@ public class UserMeResponseDto {
     private String bannerImageUrl;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private boolean isPrivate;
 }

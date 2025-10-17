@@ -22,7 +22,12 @@ public class FollowController {
             @RequestBody FollowRequestDto request,
             @AuthenticationPrincipal UserDetails userDetails) {
 
-        followService.followUser(request.getUsername(), userDetails);
+        String result = followService.followUser(request.getUsername(), userDetails);
+
+        if ("requested".equals(result)) {
+            return ResponseEntity.ok("Follow request sent to private user: " + request.getUsername());
+        }
+
         return ResponseEntity.ok("Successfully followed user: " + request.getUsername());
     }
 

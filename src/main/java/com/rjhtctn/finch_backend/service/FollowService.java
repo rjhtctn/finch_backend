@@ -72,6 +72,17 @@ public class FollowService {
         followRepository.delete(followToDelete);
     }
 
+    @Transactional
+    public void removeFollower(UserDetails currentUserDetails, String followerUsername) {
+        User currentUser = userService.findUserByUsername(currentUserDetails.getUsername());
+        User follower = userService.findUserByUsername(followerUsername);
+
+        Follow followRecord = followRepository.findByFollowerAndFollowing(follower, currentUser)
+                .orElseThrow(() -> new ConflictException(followerUsername + " is not following you."));
+
+        followRepository.delete(followRecord);
+    }
+
     private User findUserByUsername(String username) {
         return userService.findUserByUsername(username);
     }

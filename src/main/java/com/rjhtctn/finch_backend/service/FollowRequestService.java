@@ -10,6 +10,7 @@ import com.rjhtctn.finch_backend.repository.FollowRequestRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -46,7 +47,7 @@ public class FollowRequestService {
     }
 
     @Transactional
-    public void acceptRequest(Long requestId) {
+    public void acceptRequest(UUID requestId) {
         FollowRequest req = followRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Follow request not found."));
 
@@ -62,20 +63,12 @@ public class FollowRequestService {
     }
 
     @Transactional
-    public void rejectRequest(Long requestId) {
+    public void rejectRequest(UUID requestId) {
         FollowRequest req = followRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Follow request not found."));
 
         switch (req.getStatus()) {
-            case PENDING -> {
-                req.setStatus(FollowRequest.Status.REJECTED);
-                followRequestRepository.save(req);
-            }
-            case ACCEPTED -> {
-                var receiverDetails = new org.springframework.security.core.userdetails.User(
-                        req.getReceiver().getUsername(), "", List.of()
-                );
-                followService.unfollowUser(req.getSender().getUsername(), receiverDetails);
+            case PENDING, ACCEPTED -> {
                 req.setStatus(FollowRequest.Status.REJECTED);
                 followRequestRepository.save(req);
             }

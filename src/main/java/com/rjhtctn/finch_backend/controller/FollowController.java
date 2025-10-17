@@ -39,4 +39,13 @@ public class FollowController {
         followService.unfollowUser(username, userDetails);
         return ResponseEntity.ok("Successfully unfollowed user: " + username);
     }
+
+    @DeleteMapping("/remove-follower/{username}")
+    public ResponseEntity<String> removeFollower(
+            @PathVariable String username,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        followService.removeFollower(userDetails, username);
+        return ResponseEntity.ok("Removed " + username + " from your followers.");
+    }
 }

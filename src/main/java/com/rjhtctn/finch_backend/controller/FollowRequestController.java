@@ -9,6 +9,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/follow-request")
@@ -23,13 +24,13 @@ public class FollowRequestController {
     }
 
     @PostMapping("/{requestId}/accept")
-    public ResponseEntity<String> accept(@PathVariable Long requestId) {
+    public ResponseEntity<String> accept(@PathVariable UUID requestId) {
         followRequestService.acceptRequest(requestId);
         return ResponseEntity.ok("Follow request accepted.");
     }
 
     @PostMapping("/{requestId}/reject")
-    public ResponseEntity<String> reject(@PathVariable Long requestId) {
+    public ResponseEntity<String> reject(@PathVariable UUID requestId) {
         followRequestService.rejectRequest(requestId);
         return ResponseEntity.ok("Follow request rejected.");
     }

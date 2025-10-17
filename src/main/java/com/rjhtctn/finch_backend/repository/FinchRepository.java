@@ -1,5 +1,6 @@
 package com.rjhtctn.finch_backend.repository;
 
+import com.rjhtctn.finch_backend.dto.finch.FinchResponseDto;
 import com.rjhtctn.finch_backend.model.Finch;
 import com.rjhtctn.finch_backend.model.User;
 import org.springframework.data.domain.Page;
@@ -16,4 +17,6 @@ public interface FinchRepository extends JpaRepository<Finch, UUID> {
     List<Finch> findByUser_Username(String username, Sort sort);
 
     Page<Finch> findByUserIn(List<User> users, Pageable pageable);
+
+    List<Finch> findByParentFinchIsNull(Sort sort);
 }

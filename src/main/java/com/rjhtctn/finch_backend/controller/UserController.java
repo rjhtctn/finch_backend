@@ -21,8 +21,9 @@ public class UserController {
     }
 
     @GetMapping("/{username}")
-    public ResponseEntity<UserProfileResponseDto> getUserProfileByUsername(@PathVariable String username) {
-        UserProfileResponseDto userProfile = userService.getOneUser(username);
+    public ResponseEntity<UserProfileResponseDto> getUserProfileByUsername(@PathVariable String username,
+                                                                           @AuthenticationPrincipal UserDetails userDetails) {
+        UserProfileResponseDto userProfile = userService.getOneUser(username, userDetails);
         return ResponseEntity.ok(userProfile);
     }
 
@@ -70,19 +71,22 @@ public class UserController {
     }
 
     @GetMapping("/{username}/finch")
-    public ResponseEntity<List<FinchResponseDto>> getFinchesOfUser(@PathVariable String username) {
-        List<FinchResponseDto> finches = userService.getFinchesOfUser(username);
+    public ResponseEntity<List<FinchResponseDto>> getFinchesOfUser(@PathVariable String username,
+                                                                   @AuthenticationPrincipal UserDetails userDetails) {
+        List<FinchResponseDto> finches = userService.getFinchesOfUser(username, userDetails);
         return ResponseEntity.ok(finches);
     }
 
     @GetMapping("/{username}/followers")
-    public ResponseEntity<List<UserResponseDto>> getFollowers(@PathVariable String username) {
-        return ResponseEntity.ok(userService.getFollowers(username));
+    public ResponseEntity<List<UserResponseDto>> getFollowers(@PathVariable String username,
+                                                              @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(userService.getFollowers(username, userDetails));
     }
 
     @GetMapping("/{username}/following")
-    public ResponseEntity<List<UserResponseDto>> getFollowing(@PathVariable String username) {
-        return ResponseEntity.ok(userService.getFollowing(username));
+    public ResponseEntity<List<UserResponseDto>> getFollowing(@PathVariable String username,
+                                                              @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(userService.getFollowing(username, userDetails));
     }
 
     @GetMapping("/me/followers")

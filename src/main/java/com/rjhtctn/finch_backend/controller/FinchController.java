@@ -3,7 +3,9 @@ package com.rjhtctn.finch_backend.controller;
 import com.rjhtctn.finch_backend.dto.finch.CreateFinchRequestDto;
 import com.rjhtctn.finch_backend.dto.finch.FinchResponseDto;
 import com.rjhtctn.finch_backend.dto.finch.UpdateFinchRequestDto;
+import com.rjhtctn.finch_backend.dto.user.UserResponseDto;
 import com.rjhtctn.finch_backend.service.FinchService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -34,14 +36,15 @@ public class FinchController {
     }
 
     @GetMapping
-    public ResponseEntity<List<FinchResponseDto>> getAllFinches() {
-        List<FinchResponseDto> finches = finchService.getAllFinches();
+    public ResponseEntity<List<FinchResponseDto>> getAllFinches(@AuthenticationPrincipal  UserDetails userDetails) {
+        List<FinchResponseDto> finches = finchService.getAllFinches(userDetails);
         return ResponseEntity.ok(finches);
     }
 
     @GetMapping("/{finchId}")
-    public ResponseEntity<FinchResponseDto> getFinchById(@PathVariable UUID finchId) {
-        FinchResponseDto finch = finchService.getFinchById(finchId);
+    public ResponseEntity<FinchResponseDto> getFinchById(@PathVariable UUID finchId,
+                                                         @AuthenticationPrincipal UserDetails userDetails) {
+        FinchResponseDto finch = finchService.getFinchById(finchId, userDetails);
         return ResponseEntity.ok(finch);
     }
 
@@ -62,5 +65,21 @@ public class FinchController {
 
         FinchResponseDto updatedFinch = finchService.updateFinch(finchId, request, userDetails);
         return ResponseEntity.ok(updatedFinch);
+    }
+
+    @PostMapping("/{parentId}/reply")
+    public ResponseEntity<FinchResponseDto> replyToFinch(
+            @PathVariable UUID parentId,
+            @RequestBody @Valid CreateFinchRequestDto dto,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        FinchResponseDto response = finchService.replyToFinch(parentId, dto, userDetails);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{finchId}/likes")
+    public ResponseEntity<List<UserResponseDto>> getLikedUsersOfFinch(@PathVariable UUID finchId) {
+        List<UserResponseDto> likedUsers = finchService.getLikedUsersOfFinch(finchId);
+        return ResponseEntity.ok(likedUsers);
     }
 }

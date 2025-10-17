@@ -14,4 +14,7 @@ public class FinchResponseDto {
     private UserResponseDto author;
     private List<UserResponseDto> likedUsers;
     private long likeCount;
+    private long replyCount;
+    private List<FinchResponseDto> replies;
+    private UUID parentId;
 }

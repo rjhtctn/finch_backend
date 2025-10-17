@@ -67,4 +67,8 @@ public class FollowService {
                 .map(follow -> UserMapper.toUserResponse(follow.getFollowing()))
                 .collect(Collectors.toList());
     }
+
+    public boolean isFollowing(User follower, User target) {
+        return followRepository.findByFollowerAndFollowing(follower, target).isPresent();
+    }
 }

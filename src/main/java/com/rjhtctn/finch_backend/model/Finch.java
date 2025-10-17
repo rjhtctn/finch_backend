@@ -7,9 +7,7 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.type.SqlTypes;
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 @Getter
 @Setter
@@ -43,4 +41,11 @@ public class Finch {
 
     @OneToMany(mappedBy = "finch", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<Like> likes = new HashSet<>();
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_id")
+    private Finch parentFinch;
+
+    @OneToMany(mappedBy = "parentFinch", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Finch> replies = new ArrayList<>();
 }

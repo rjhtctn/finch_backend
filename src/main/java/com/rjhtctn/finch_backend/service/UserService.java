@@ -46,16 +46,21 @@ public class UserService {
     @Transactional(readOnly = true)
     public List<UserResponseDto> getAllUsers() {
         return userRepository.findAll().stream()
-                .filter(user -> !user.isPrivate())
+                .filter(u -> !u.isPrivate())
                 .map(UserMapper::toUserResponse)
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
-    public UserProfileResponseDto getOneUser(String username) {
+    public UserProfileResponseDto getOneUser(String username, UserDetails requester) {
         User user = findUserByUsername(username);
-        checkPrivateAccess(user);
+        checkPrivateAccess(user, requester);
         return UserMapper.toUserProfileResponse(user);
+    }
+
+    @Transactional(readOnly = true)
+    public UserMeResponseDto getMyProfile(UserDetails userDetails) {
+        return UserMapper.toUserMeResponse(findUserByUsername(userDetails.getUsername()));
     }
 
     @Transactional
@@ -63,7 +68,6 @@ public class UserService {
         User user = findUserByUsername(username);
         UserMapper.updateUserFromDto(user, request);
         userRepository.save(user);
-
         return UserMapper.toUserMeResponse(user);
     }
 
@@ -78,7 +82,6 @@ public class UserService {
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
         validTokenService.invalidateAllTokensForUser(user);
-
     }
 
     @Transactional
@@ -88,64 +91,57 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public UserMeResponseDto getMyProfile(UserDetails userDetails) {
-        return UserMapper.toUserMeResponse(findUserByUsername(userDetails.getUsername()));
-    }
-
-    @Transactional(readOnly = true)
-    public List<FinchResponseDto> getFinchesOfUser(String username) {
+    public List<FinchResponseDto> getFinchesOfUser(String username, UserDetails requester) {
         User user = findUserByUsername(username);
-        checkPrivateAccess(user);
-        return finchService.getFinchesByUsername(username);
+        checkPrivateAccess(user, requester);
+        return finchService.getFinchesByUsername(username, requester);
     }
 
     @Transactional(readOnly = true)
     public List<FinchResponseDto> getMyFinches(UserDetails userDetails) {
-        return finchService.getFinchesByUsername(userDetails.getUsername());
+        return finchService.getFinchesByUsername(userDetails.getUsername(), userDetails);
     }
 
     @Transactional(readOnly = true)
-    public List<UserResponseDto> getFollowers(String username) {
+    public List<UserResponseDto> getFollowers(String username, UserDetails requester) {
         User user = findUserByUsername(username);
-        checkPrivateAccess(user);
+        checkPrivateAccess(user, requester);
         return followService.getFollowers(user);
     }
 
     @Transactional(readOnly = true)
-    public List<UserResponseDto> getFollowing(String username) {
+    public List<UserResponseDto> getFollowing(String username, UserDetails requester) {
         User user = findUserByUsername(username);
-        checkPrivateAccess(user);
+        checkPrivateAccess(user, requester);
         return followService.getFollowing(user);
     }
 
     @Transactional(readOnly = true)
     public List<UserResponseDto> getMyFollowers(UserDetails userDetails) {
-        return getFollowers(userDetails.getUsername());
+        return getFollowers(userDetails.getUsername(), userDetails);
     }
 
     @Transactional(readOnly = true)
     public List<UserResponseDto> getMyFollowing(UserDetails userDetails) {
-        return getFollowing(userDetails.getUsername());
+        return getFollowing(userDetails.getUsername(), userDetails);
     }
 
     @Transactional(readOnly = true)
-    public List<FinchResponseDto> getLikedFinchesByUsername(String username) {
+    public List<FinchResponseDto> getLikedFinchesByUsername(String username, UserDetails requester) {
         User user = findUserByUsername(username);
-        checkPrivateAccess(user);
+        checkPrivateAccess(user, requester);
         return finchService.getLikedFinchesByUser(user);
     }
 
     @Transactional(readOnly = true)
     public List<FinchResponseDto> getMyLikedFinches(UserDetails userDetails) {
-        return getLikedFinchesByUsername(userDetails.getUsername());
+        return getLikedFinchesByUsername(userDetails.getUsername(), userDetails);
     }
 
     @Transactional
     public void setPrivateUser(UserDetails userDetails) {
         User user = findUserByUsername(userDetails.getUsername());
-        if (user.isPrivate()) {
-            throw new ConflictException("User is already private.");
-        }
+        if (user.isPrivate()) throw new ConflictException("User is already private.");
         user.setPrivate(true);
         userRepository.save(user);
     }
@@ -153,21 +149,27 @@ public class UserService {
     @Transactional
     public void setPublicUser(UserDetails userDetails) {
         User user = findUserByUsername(userDetails.getUsername());
-        if (!user.isPrivate()) {
-            throw new ConflictException("User is already public.");
-        }
+        if (!user.isPrivate()) throw new ConflictException("User is already public.");
         user.setPrivate(false);
         userRepository.save(user);
     }
 
     @Transactional(readOnly = true)
-    public boolean isPrivate(String username) {
-        return findUserByUsername(username).isPrivate();
-    }
+    protected void checkPrivateAccess(User targetUser, UserDetails requesterDetails) {
+        if (!targetUser.isPrivate()) return;
 
-    private void checkPrivateAccess(User user) {
-        if (user.isPrivate()) {
+        if (requesterDetails == null)
             throw new ConflictException("This user's profile is private.");
-        }
+
+        User requester = findUserByUsername(requesterDetails.getUsername());
+
+        if (targetUser.getId().equals(requester.getId()))
+            return;
+
+        boolean isFollower = followService.isFollowing(requester, targetUser);
+        if (isFollower)
+            return;
+
+        throw new ConflictException("This user's profile is private.");
     }
 }

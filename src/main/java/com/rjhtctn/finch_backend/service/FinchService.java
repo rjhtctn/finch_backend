@@ -20,7 +20,6 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -50,8 +49,7 @@ public class FinchService {
         finch.setContent(dto.getContent());
         finch.setUser(author);
         Finch saved = finchRepository.save(finch);
-
-        return enrichFinch(FinchMapper.toFinchResponse(saved));
+        return enrichCounters(FinchMapper.toFinchResponseWithoutReplies(saved));
     }
 
     @Transactional
@@ -59,8 +57,7 @@ public class FinchService {
         Finch finch = findOwnedFinch(finchId, userDetails);
         finch.setContent(dto.getContent());
         Finch updated = finchRepository.save(finch);
-
-        return enrichFinch(FinchMapper.toFinchResponse(updated));
+        return enrichCounters(FinchMapper.toFinchResponseWithoutReplies(updated));
     }
 
     @Transactional
@@ -72,8 +69,9 @@ public class FinchService {
     @Transactional
     protected Finch findOwnedFinch(UUID finchId, UserDetails userDetails) {
         Finch finch = findFinchById(finchId);
-        if (!finch.getUser().getUsername().equals(userDetails.getUsername()))
+        if (!finch.getUser().getUsername().equals(userDetails.getUsername())) {
             throw new AccessDeniedException("You are not authorized to modify this Finch.");
+        }
         return finch;
     }
 
@@ -84,27 +82,28 @@ public class FinchService {
     }
 
     @Transactional(readOnly = true)
-    public FinchResponseDto getFinchById(UUID finchId, UserDetails userDetails) {
+    public FinchResponseDto getFinchById(UUID finchId, UserDetails userDetails, int depth) {
         Finch finch = findFinchById(finchId);
         User currentUser = userService.findUserByUsername(userDetails.getUsername());
 
-        if (finch.getUser().isPrivate() &&
-                !finch.getUser().getId().equals(currentUser.getId()) &&
-                !followService.isFollowing(currentUser, finch.getUser())) {
+        if (finch.getUser().isPrivate()
+                && !finch.getUser().getId().equals(currentUser.getId())
+                && !followService.isFollowing(currentUser, finch.getUser())) {
             throw new ConflictException("This user's account is private.");
         }
 
-        FinchResponseDto dto = enrichFinch(FinchMapper.toFinchResponse(finch));
+        FinchResponseDto dto = FinchMapper.toFinchResponse(finch, depth);
 
-        dto.setReplies(finch.getReplies().stream()
-                .sorted(Comparator.comparing(Finch::getCreatedAt))
-                .map(r -> {
-                    FinchResponseDto reply = FinchMapper.toFinchResponseWithoutReplies(r);
-                    reply.setLikeCount(likeService.getLikeCountForFinch(r));
-                    return reply;
-                })
-                .collect(Collectors.toList())
-        );
+        dto.setLikeCount(likeService.getLikeCountForFinch(finch));
+        dto.setReplyCount(finch.getReplies() != null ? finch.getReplies().size() : 0);
+
+        if (dto.getReplies() != null && depth > 1) {
+            dto.getReplies().forEach(r -> {
+                Finch replyEntity = findFinchById(r.getId());
+                r.setLikeCount(likeService.getLikeCountForFinch(replyEntity));
+                r.setReplyCount(replyEntity.getReplies() != null ? replyEntity.getReplies().size() : 0);
+            });
+        }
 
         return dto;
     }
@@ -124,6 +123,7 @@ public class FinchService {
                 .map(f -> {
                     FinchResponseDto dto = FinchMapper.toFinchResponseWithoutReplies(f);
                     dto.setLikeCount(likeService.getLikeCountForFinch(f));
+                    dto.setReplyCount(f.getReplies() != null ? f.getReplies().size() : 0);
                     return dto;
                 })
                 .collect(Collectors.toList());
@@ -142,6 +142,7 @@ public class FinchService {
                 .map(f -> {
                     FinchResponseDto dto = FinchMapper.toFinchResponseWithoutReplies(f);
                     dto.setLikeCount(likeService.getLikeCountForFinch(f));
+                    dto.setReplyCount(f.getReplies() != null ? f.getReplies().size() : 0);
                     return dto;
                 })
                 .collect(Collectors.toList());
@@ -151,7 +152,8 @@ public class FinchService {
     public List<FinchResponseDto> getLikedFinchesByUser(User user) {
         return likeService.getLikedFinchesForUser(user)
                 .stream()
-                .map(f -> enrichFinch(FinchMapper.toFinchResponseWithoutReplies(f)))
+                .map(FinchMapper::toFinchResponseWithoutReplies)
+                .map(this::enrichCounters)
                 .collect(Collectors.toList());
     }
 
@@ -164,8 +166,7 @@ public class FinchService {
         followingUsers.add(currentUser);
 
         Page<Finch> page = finchRepository.findByUserIn(followingUsers, pageable);
-        return page.map(f -> enrichFinch(FinchMapper.toFinchResponseWithoutReplies(f)));
-    }
+        return page.map(f -> enrichCounters(FinchMapper.toFinchResponseWithoutReplies(f)));    }
 
     @Transactional
     public FinchResponseDto replyToFinch(UUID parentId, CreateFinchRequestDto dto, UserDetails userDetails) {
@@ -176,8 +177,9 @@ public class FinchService {
         boolean isSelf = parentOwner.getId().equals(author.getId());
         boolean isFollower = followService.isFollowing(author, parentOwner);
 
-        if (parentOwner.isPrivate() && !isSelf && !isFollower)
+        if (parentOwner.isPrivate() && !isSelf && !isFollower) {
             throw new AccessDeniedException("You cannot reply to a private user's Finch.");
+        }
 
         Finch reply = new Finch();
         reply.setContent(dto.getContent());
@@ -185,7 +187,7 @@ public class FinchService {
         reply.setParentFinch(parent);
 
         Finch saved = finchRepository.save(reply);
-        return enrichFinch(FinchMapper.toFinchResponse(saved));
+        return enrichCounters(FinchMapper.toFinchResponseWithoutReplies(saved));
     }
 
     @Transactional(readOnly = true)
@@ -198,7 +200,7 @@ public class FinchService {
     }
 
     @Transactional(readOnly = true)
-    protected FinchResponseDto enrichFinch(FinchResponseDto dto) {
+    protected FinchResponseDto enrichCounters(FinchResponseDto dto) {
         Finch finch = findFinchById(dto.getId());
         dto.setLikeCount(likeService.getLikeCountForFinch(finch));
         dto.setReplyCount(finch.getReplies() != null ? finch.getReplies().size() : 0);

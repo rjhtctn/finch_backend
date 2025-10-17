@@ -43,8 +43,9 @@ public class FinchController {
 
     @GetMapping("/{finchId}")
     public ResponseEntity<FinchResponseDto> getFinchById(@PathVariable UUID finchId,
+                                                         @RequestParam(defaultValue = "2") int depth,
                                                          @AuthenticationPrincipal UserDetails userDetails) {
-        FinchResponseDto finch = finchService.getFinchById(finchId, userDetails);
+        FinchResponseDto finch = finchService.getFinchById(finchId, userDetails, depth);
         return ResponseEntity.ok(finch);
     }
 

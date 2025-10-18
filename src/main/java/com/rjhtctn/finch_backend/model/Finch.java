@@ -27,6 +27,9 @@ public class Finch {
     @Column(nullable = false, length = 280)
     private String content;
 
+    @Column(name = "image_url", nullable = true)
+    private String imageUrl;
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

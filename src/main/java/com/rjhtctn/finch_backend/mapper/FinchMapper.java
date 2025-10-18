@@ -29,6 +29,7 @@ public class FinchMapper {
         dto.setContent(finch.getContent());
         dto.setCreatedAt(finch.getCreatedAt());
         dto.setAuthor(UserMapper.toUserResponse(finch.getUser()));
+        dto.setImageUrl(finch.getImageUrl());
         if (finch.getParentFinch() != null) {
             dto.setParentId(finch.getParentFinch().getId());
         }

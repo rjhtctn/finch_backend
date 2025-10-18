@@ -17,6 +17,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -29,25 +30,40 @@ public class FinchService {
     private final LikeService likeService;
     private final FollowService followService;
     private final RefinchService refinchService;
+    private final ImageKitService imageKitService;
 
     public FinchService(FinchRepository finchRepository,
                         UserService userService,
                         @Lazy LikeService likeService,
                         FollowService followService,
-                        @Lazy RefinchService refinchService) {
+                        @Lazy RefinchService refinchService,
+                        ImageKitService imageKitService) {
         this.finchRepository = finchRepository;
         this.userService = userService;
         this.likeService = likeService;
         this.followService = followService;
         this.refinchService = refinchService;
+        this.imageKitService = imageKitService;
     }
 
     @Transactional
-    public FinchResponseDto createFinch(CreateFinchRequestDto dto, UserDetails userDetails) {
+    public FinchResponseDto createFinch(CreateFinchRequestDto dto, MultipartFile image, UserDetails userDetails) {
+        System.out.println("===> Finch create start. content: " + dto.getContent() + ", image: " + (image != null ? image.getOriginalFilename() : "null"));
         User author = userService.findUserByUsername(userDetails.getUsername());
         Finch finch = new Finch();
         finch.setContent(dto.getContent());
         finch.setUser(author);
+
+        if (image != null && !image.isEmpty()) {
+            System.out.println("===> Uploading image to ImageKit...");
+            String imageUrl = imageKitService.uploadImage(image, "finch/posts");
+            if (imageUrl.isEmpty() || imageUrl.equals("null")) {
+                throw new ConflictException("ImageKit returned null URL");
+            }
+            System.out.println("===> Uploaded image URL: " + imageUrl);
+            finch.setImageUrl(imageUrl);
+        }
+
         Finch saved = finchRepository.save(finch);
         return enrichCounters(FinchMapper.toFinchResponseWithoutReplies(saved), author);
     }

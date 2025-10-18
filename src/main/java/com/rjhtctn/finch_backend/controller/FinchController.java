@@ -6,12 +6,14 @@ import com.rjhtctn.finch_backend.dto.finch.UpdateFinchRequestDto;
 import com.rjhtctn.finch_backend.dto.user.UserResponseDto;
 import com.rjhtctn.finch_backend.service.FinchService;
 import jakarta.validation.Valid;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
-
+import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import java.util.UUID;
 
@@ -25,12 +27,21 @@ public class FinchController {
         this.finchService = finchService;
     }
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<FinchResponseDto> createFinch(
-            @RequestBody @Valid CreateFinchRequestDto dto,
+            @ParameterObject @ModelAttribute @Valid CreateFinchRequestDto dto,
+            @RequestPart(value = "image", required = false) MultipartFile image,
             @AuthenticationPrincipal UserDetails userDetails) {
+
+        boolean hasText = dto.getContent() != null && !dto.getContent().isBlank();
+        boolean hasImage = image != null && !image.isEmpty();
+
+        if (!hasText && !hasImage) {
+            return ResponseEntity.badRequest().build();
+        }
+
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(finchService.createFinch(dto, userDetails));
+                .body(finchService.createFinch(dto,image, userDetails));
     }
 
     @GetMapping("/{finchId}")

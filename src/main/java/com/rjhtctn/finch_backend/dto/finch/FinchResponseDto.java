@@ -13,6 +13,8 @@ public class FinchResponseDto {
     private LocalDateTime createdAt;
     private UserResponseDto author;
 
+    private String imageUrl;
+
     private long likeCount;
     private int replyCount;
 

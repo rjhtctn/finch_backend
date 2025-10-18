@@ -18,7 +18,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-
 import java.io.*;
 import java.util.Map;
 
@@ -42,7 +41,12 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
         HttpServletRequest wrappedReq = isAuth ? new CachedBodyHttpServletRequest(request) : request;
         CachedBodyHttpServletResponse wrappedRes = new CachedBodyHttpServletResponse(response);
 
-        filterChain.doFilter(wrappedReq, wrappedRes);
+        try {
+            filterChain.doFilter(wrappedReq, wrappedRes);
+        } catch (Exception e) {
+            log.error("❌ Uncaught exception in filter for {}: {}", request.getRequestURI(), e.getMessage(), e);
+            throw e;
+        }
 
         long duration = System.currentTimeMillis() - start;
         int status = wrappedRes.getStatus();

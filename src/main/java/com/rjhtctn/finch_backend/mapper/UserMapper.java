@@ -59,8 +59,6 @@ public class UserMapper {
         userToUpdate.setBio(request.getBio());
         userToUpdate.setLocation(request.getLocation());
         userToUpdate.setWebsite(request.getWebsite());
-        userToUpdate.setProfileImageUrl(request.getProfileImageUrl());
-        userToUpdate.setBannerImageUrl(request.getBannerImageUrl());
     }
 
     public static UserMeResponseDto toUserMeResponse(User user) {
@@ -84,6 +82,5 @@ public class UserMapper {
         dto.setPrivate(user.isPrivate());
 
         return dto;
-
     }
 }

@@ -4,10 +4,14 @@ import com.rjhtctn.finch_backend.dto.finch.FinchResponseDto;
 import com.rjhtctn.finch_backend.dto.user.*;
 import com.rjhtctn.finch_backend.service.UserService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
 import java.util.List;
 
 @RestController
@@ -32,13 +36,40 @@ public class UserController {
         return ResponseEntity.ok(users);
     }
 
-    @PutMapping("/me")
+    @PutMapping("/me/profile")
     public ResponseEntity<UserMeResponseDto> updateUserProfile(
             @RequestBody UpdateUserProfileRequestDto request,
             @AuthenticationPrincipal UserDetails userDetails) {
 
         UserMeResponseDto updatedUser = userService.updateUserProfile(userDetails.getUsername(), request);
         return ResponseEntity.ok(updatedUser);
+    }
+
+    @PutMapping(value ="/me/profile-photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<UserMeResponseDto> updateUserProfilePhoto(
+            @RequestPart(value = "image", required = false) MultipartFile image,
+            @AuthenticationPrincipal  UserDetails userDetails) {
+
+        UserMeResponseDto updatedUser = userService.updateProfileImage(userDetails, image);
+        return ResponseEntity.ok(updatedUser);
+    }
+
+    @PutMapping(value = "/me/banner-photo",  consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<UserMeResponseDto> updateUserProfileBanner(
+            @RequestPart(value = "image", required = false) MultipartFile image,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        UserMeResponseDto updatedUser = userService.updateBannerImage(userDetails, image);
+        return ResponseEntity.ok(updatedUser);
+    }
+
+    @PutMapping("/me/email")
+    public ResponseEntity<UserMeResponseDto> updateUserProfileEmail(
+            @RequestBody @Email ChangeEmailRequestDto request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        UserMeResponseDto response = userService.changeEmail(userDetails, request);
+        return  ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/me")

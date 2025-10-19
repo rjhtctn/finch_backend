@@ -16,6 +16,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -71,7 +72,6 @@ public class AuthService {
             mailService.sendVerificationEmail(newUser, token);
         } catch (MailException e) {
             userRepository.delete(newUser);
-            throw new ConflictException("Failed to send verification email. Please try again.");
         }
 
         return UserMapper.toUserResponse(newUser);
@@ -90,7 +90,7 @@ public class AuthService {
             org.springframework.security.core.userdetails.User principal =
                     (org.springframework.security.core.userdetails.User) authentication.getPrincipal();
 
-            User user = userService.findUserByUsername(principal.getUsername());
+            User user = userService.findUserByUsernameOrEmail(principal.getUsername());
 
             String token = jwtService.generateToken(principal);
             String jwtId = jwtService.extractId(token);
@@ -150,24 +150,23 @@ public class AuthService {
 
     }
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void updateToken(User user, String token) {
+        user.setLatestVerificationJwt(token);
+        userRepository.saveAndFlush(user);
+    }
+
     @Transactional
     public void resendVerificationToken(String identifier) {
-        User user = userRepository.findByUsernameOrEmail(identifier, identifier)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with given identifier."));
+        User user = userRepository.findByUsername(identifier)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found for verification token."));
 
-        if (user.isEnabled()) {
+        if (user.isEnabled())
             throw new ConflictException("Account already verified.");
-        }
 
         String token = jwtService.generateVerificationToken(user);
-        user.setLatestVerificationJwt(token);
-        userRepository.save(user);
-
-        try {
-            mailService.sendVerificationEmail(user, token);
-        } catch (MailException e) {
-            throw new ConflictException("Could not resend verification email.");
-        }
+        updateToken(user, token);
+        mailService.sendVerificationEmail(user, token);
     }
 
     @Transactional
@@ -192,7 +191,7 @@ public class AuthService {
     @Transactional
     public void performPasswordReset(String token, String newPassword) {
         String username = jwtService.extractUsername(token);
-        User user = userService.findUserByUsername(username);
+        User user = userService.findUserByUsernameOrEmail(username);
         String jwtId = jwtService.extractId(token);
 
         if (!validTokenService.isTokenValidInDatabase(jwtId)) {

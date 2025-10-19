@@ -1,7 +1,7 @@
 package com.rjhtctn.finch_backend.security;
 
 import com.rjhtctn.finch_backend.model.User;
-import com.rjhtctn.finch_backend.repository.UserRepository;
+import com.rjhtctn.finch_backend.service.UserService;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -11,16 +11,15 @@ import java.util.ArrayList;
 @Service
 public class UserDetailsServiceImpl implements UserDetailsService {
 
-    private final UserRepository userRepository;
+    private final UserService userService;
 
-    public UserDetailsServiceImpl(UserRepository userRepository) {
-        this.userRepository = userRepository;
+    public UserDetailsServiceImpl(UserService userService) {
+        this.userService = userService;
     }
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User user = userRepository.findByUsernameOrEmail(username, username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found with username or email: " + username));
+        User user = userService.findUserByUsernameOrEmail(username);
 
         return new org.springframework.security.core.userdetails.User(
                 user.getUsername(),

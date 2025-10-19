@@ -40,7 +40,7 @@ public class FeedService {
 
     @Transactional(readOnly = true)
     public List<FinchResponseDto> getGlobalFeed(UserDetails userDetails) {
-        User currentUser = userService.findUserByUsername(userDetails.getUsername());
+        User currentUser = userService.findUserByUsernameOrEmail(userDetails.getUsername());
 
         Set<UUID> followingIds = followService.getFollowing(currentUser).stream()
                 .map(UserResponseDto::getId)
@@ -65,7 +65,7 @@ public class FeedService {
 
     @Transactional(readOnly = true)
     public List<FinchResponseDto> getFollowingFeed(UserDetails userDetails) {
-        User currentUser = userService.findUserByUsername(userDetails.getUsername());
+        User currentUser = userService.findUserByUsernameOrEmail(userDetails.getUsername());
 
         List<User> followingUsers = currentUser.getFollowing().stream()
                 .map(Follow::getFollowing)

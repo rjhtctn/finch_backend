@@ -30,8 +30,8 @@ public class FollowService {
 
     @Transactional
     public String followUser(String targetUsername, UserDetails userDetails) {
-        User follower = userService.findUserByUsername(userDetails.getUsername());
-        User following = userService.findUserByUsername(targetUsername);
+        User follower = userService.findUserByUsernameOrEmail(userDetails.getUsername());
+        User following = userService.findUserByUsernameOrEmail(targetUsername);
 
         if (follower.equals(following)) {
             throw new ConflictException("You cannot follow yourself.");
@@ -74,8 +74,8 @@ public class FollowService {
 
     @Transactional
     public void removeFollower(UserDetails currentUserDetails, String followerUsername) {
-        User currentUser = userService.findUserByUsername(currentUserDetails.getUsername());
-        User follower = userService.findUserByUsername(followerUsername);
+        User currentUser = userService.findUserByUsernameOrEmail(currentUserDetails.getUsername());
+        User follower = userService.findUserByUsernameOrEmail(followerUsername);
 
         Follow followRecord = followRepository.findByFollowerAndFollowing(follower, currentUser)
                 .orElseThrow(() -> new ConflictException(followerUsername + " is not following you."));
@@ -84,7 +84,7 @@ public class FollowService {
     }
 
     private User findUserByUsername(String username) {
-        return userService.findUserByUsername(username);
+        return userService.findUserByUsernameOrEmail(username);
     }
 
     public List<UserResponseDto> getFollowers(User user) {

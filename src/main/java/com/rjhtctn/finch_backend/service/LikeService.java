@@ -31,7 +31,7 @@ public class LikeService {
     }
 
     public void likeFinch(UUID finchId, UserDetails userDetails) {
-        User user = userService.findUserByUsername(userDetails.getUsername());
+        User user = userService.findUserByUsernameOrEmail(userDetails.getUsername());
         Finch finch = finchService.findFinchById(finchId);
         User owner = finch.getUser();
 
@@ -52,7 +52,7 @@ public class LikeService {
     }
 
     public void unlikeFinch(UUID finchId, UserDetails userDetails) {
-        User user = userService.findUserByUsername(userDetails.getUsername());
+        User user = userService.findUserByUsernameOrEmail(userDetails.getUsername());
         Finch finch = finchService.findFinchById(finchId);
 
         Like likeToDelete = likeRepository.findByUserAndFinch(user, finch)

@@ -38,7 +38,7 @@ public class FollowRequestController {
     @GetMapping("/pending")
     public ResponseEntity<List<FollowRequestResponseDto>> getPendingRequests(
             @AuthenticationPrincipal UserDetails userDetails) {
-        User receiver = userService.findUserByUsername(userDetails.getUsername());
+        User receiver = userService.findUserByUsernameOrEmail(userDetails.getUsername());
         return ResponseEntity.ok(followRequestService.getPendingRequests(receiver));
     }
 }

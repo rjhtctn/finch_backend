@@ -9,6 +9,4 @@ public class UpdateUserProfileRequestDto {
     private String bio;
     private String location;
     private String website;
-    private String profileImageUrl;
-    private String bannerImageUrl;
 }

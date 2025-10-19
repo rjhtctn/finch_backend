@@ -7,13 +7,17 @@ import com.rjhtctn.finch_backend.exception.ResourceNotFoundException;
 import com.rjhtctn.finch_backend.mapper.UserMapper;
 import com.rjhtctn.finch_backend.model.User;
 import com.rjhtctn.finch_backend.repository.UserRepository;
+import com.rjhtctn.finch_backend.security.JwtService;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -24,23 +28,35 @@ public class UserService {
     private final FollowService followService;
     private final PasswordEncoder passwordEncoder;
     private final ValidTokenService validTokenService;
+    private final ImageKitService imageKitService;
+    private final MailService mailService;
+    private final JwtService jwtService;
 
     public UserService(UserRepository userRepository,
                        @Lazy FinchService finchService,
                        @Lazy FollowService followService,
                        PasswordEncoder passwordEncoder,
-                       ValidTokenService validTokenService) {
+                       ValidTokenService validTokenService,
+                       ImageKitService imageKitService,
+                       MailService mailService,
+                       JwtService jwtService) {
         this.userRepository = userRepository;
         this.finchService = finchService;
         this.followService = followService;
         this.passwordEncoder = passwordEncoder;
         this.validTokenService = validTokenService;
+        this.imageKitService = imageKitService;
+        this.mailService = mailService;
+        this.jwtService = jwtService;
     }
 
     @Transactional(readOnly = true)
-    public User findUserByUsername(String username) {
-        return userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with username: " + username));
+    public User findUserByUsernameOrEmail(String usernameOrEmail) {
+        return userRepository.findByUsername(usernameOrEmail)
+                .or(() -> userRepository.findByEmail(usernameOrEmail))
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "User not found with username or email: " + usernameOrEmail
+                ));
     }
 
     @Transactional(readOnly = true)
@@ -52,26 +68,56 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public UserProfileResponseDto getOneUser(String username) {
-        User user = findUserByUsername(username);
+        User user = findUserByUsernameOrEmail(username);
         return UserMapper.toUserProfileResponse(user);
     }
 
     @Transactional(readOnly = true)
     public UserMeResponseDto getMyProfile(UserDetails userDetails) {
-        return UserMapper.toUserMeResponse(findUserByUsername(userDetails.getUsername()));
+        return UserMapper.toUserMeResponse(findUserByUsernameOrEmail(userDetails.getUsername()));
     }
 
     @Transactional
     public UserMeResponseDto updateUserProfile(String username, UpdateUserProfileRequestDto request) {
-        User user = findUserByUsername(username);
+        User user = findUserByUsernameOrEmail(username);
         UserMapper.updateUserFromDto(user, request);
         userRepository.save(user);
         return UserMapper.toUserMeResponse(user);
     }
 
     @Transactional
+    public UserMeResponseDto updateProfileImage(UserDetails userDetails, MultipartFile file) {
+        User user = findUserByUsernameOrEmail(userDetails.getUsername());
+        if (file.isEmpty()) {
+            throw new BadCredentialsException("Invalid data provided");
+        }
+
+        String folderPath = String.format("finch/%s/%s", user.getUsername(), "ProfileImages");
+
+        String imageUrl = imageKitService.uploadImage(file, folderPath);
+
+        user.setProfileImageUrl(imageUrl);
+        userRepository.save(user);
+
+        return UserMapper.toUserMeResponse(user);
+    }
+
+    @Transactional
+    public UserMeResponseDto updateBannerImage(UserDetails userDetails, MultipartFile file) {
+        User user = findUserByUsernameOrEmail(userDetails.getUsername());
+        if (file.isEmpty()) {
+            throw new BadCredentialsException("Invalid data provided");
+        }
+        String folderPath = String.format("finch/%s/%s", user.getUsername(), "BannerImages");
+        String imageUrl = imageKitService.uploadImage(file, folderPath);
+        user.setBannerImageUrl(imageUrl);
+        userRepository.save(user);
+        return UserMapper.toUserMeResponse(user);
+    }
+
+    @Transactional
     public void changePassword(UserDetails userDetails, ChangePasswordRequestDto request) {
-        User user = findUserByUsername(userDetails.getUsername());
+        User user = findUserByUsernameOrEmail(userDetails.getUsername());
 
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
             throw new BadCredentialsException("Incorrect current password.");
@@ -83,14 +129,31 @@ public class UserService {
     }
 
     @Transactional
+    public UserMeResponseDto changeEmail(UserDetails userDetails, ChangeEmailRequestDto request) {
+        User user = findUserByUsernameOrEmail(userDetails.getUsername());
+        if (Objects.equals(user.getEmail(), request.getEmail())) {
+            throw new BadCredentialsException("This email address is already in use.");
+        }
+        user.setEmail(request.getEmail());
+        userRepository.save(user);
+        String token = jwtService.generateVerificationToken(user);
+        user.setLatestVerificationJwt(token);
+        userRepository.save(user);
+        mailService.sendVerificationEmail(user, token);
+        validTokenService.invalidateAllTokensForUser(user);
+        return UserMapper.toUserMeResponse(user);
+    }
+
+    @Transactional
     public void deleteUser(UserDetails userDetails) {
-        User user = findUserByUsername(userDetails.getUsername());
+        User user = findUserByUsernameOrEmail(userDetails.getUsername());
+        imageKitService.deleteFolder("/finch/" + user.getUsername());
         userRepository.delete(user);
     }
 
     @Transactional(readOnly = true)
     public List<FinchResponseDto> getFinchesOfUser(String username, UserDetails requester) {
-        User user = findUserByUsername(username);
+        User user = findUserByUsernameOrEmail(username);
         checkPrivateAccess(user, requester);
         return finchService.getFinchesByUsername(username, requester);
     }
@@ -102,14 +165,14 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public List<UserResponseDto> getFollowers(String username, UserDetails requester) {
-        User user = findUserByUsername(username);
+        User user = findUserByUsernameOrEmail(username);
         checkPrivateAccess(user, requester);
         return followService.getFollowers(user);
     }
 
     @Transactional(readOnly = true)
     public List<UserResponseDto> getFollowing(String username, UserDetails requester) {
-        User user = findUserByUsername(username);
+        User user = findUserByUsernameOrEmail(username);
         checkPrivateAccess(user, requester);
         return followService.getFollowing(user);
     }
@@ -126,7 +189,7 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public List<FinchResponseDto> getLikedFinchesByUsername(String username, UserDetails requester) {
-        User user = findUserByUsername(username);
+        User user = findUserByUsernameOrEmail(username);
         checkPrivateAccess(user, requester);
         return finchService.getLikedFinchesByUser(user);
     }
@@ -138,7 +201,7 @@ public class UserService {
 
     @Transactional
     public void setPrivateUser(UserDetails userDetails) {
-        User user = findUserByUsername(userDetails.getUsername());
+        User user = findUserByUsernameOrEmail(userDetails.getUsername());
         if (user.isPrivate()) throw new ConflictException("User is already private.");
         user.setPrivate(true);
         userRepository.save(user);
@@ -146,7 +209,7 @@ public class UserService {
 
     @Transactional
     public void setPublicUser(UserDetails userDetails) {
-        User user = findUserByUsername(userDetails.getUsername());
+        User user = findUserByUsernameOrEmail(userDetails.getUsername());
         if (!user.isPrivate()) throw new ConflictException("User is already public.");
         user.setPrivate(false);
         userRepository.save(user);
@@ -159,7 +222,7 @@ public class UserService {
         if (requesterDetails == null)
             throw new ConflictException("This user's profile is private.");
 
-        User requester = findUserByUsername(requesterDetails.getUsername());
+        User requester = findUserByUsernameOrEmail(requesterDetails.getUsername());
 
         if (targetUser.getId().equals(requester.getId()))
             return;

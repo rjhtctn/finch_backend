@@ -55,4 +55,7 @@ public class Finch {
 
     @OneToMany(mappedBy = "parentFinch", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Finch> replies = new ArrayList<>();
+
+    @OneToMany(mappedBy = "finch", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<ReFinch> reFinches = new HashSet<>();
 }

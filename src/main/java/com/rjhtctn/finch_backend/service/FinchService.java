@@ -48,7 +48,7 @@ public class FinchService {
 
     @Transactional
     public FinchResponseDto createFinch(CreateFinchRequestDto dto, List<MultipartFile> images, UserDetails userDetails) {
-        User author = userService.findUserByUsername(userDetails.getUsername());
+        User author = userService.findUserByUsernameOrEmail(userDetails.getUsername());
 
         Finch finch = new Finch();
         finch.setContent(dto.getContent());
@@ -85,7 +85,7 @@ public class FinchService {
                                         List<MultipartFile> newImages,
                                         UserDetails userDetails) {
         Finch finch = findOwnedFinch(finchId, userDetails);
-        User author = userService.findUserByUsername(userDetails.getUsername());
+        User author = userService.findUserByUsernameOrEmail(userDetails.getUsername());
 
         Set<String> existingIds = finch.getImages() == null ? Set.of() :
                 finch.getImages().stream()
@@ -178,7 +178,7 @@ public class FinchService {
     @Transactional(readOnly = true)
     public FinchResponseDto getFinchById(UUID finchId, UserDetails userDetails, int depth) {
         Finch finch = findFinchById(finchId);
-        User currentUser = userService.findUserByUsername(userDetails.getUsername());
+        User currentUser = userService.findUserByUsernameOrEmail(userDetails.getUsername());
 
         if (finch.getUser().isPrivate()
                 && !finch.getUser().getId().equals(currentUser.getId())
@@ -206,8 +206,8 @@ public class FinchService {
 
     @Transactional(readOnly = true)
     public List<FinchResponseDto> getFinchesByUsername(String username, UserDetails userDetails) {
-        User targetUser = userService.findUserByUsername(username);
-        User currentUser = userService.findUserByUsername(userDetails.getUsername());
+        User targetUser = userService.findUserByUsernameOrEmail(username);
+        User currentUser = userService.findUserByUsernameOrEmail(userDetails.getUsername());
         boolean isSelf = targetUser.getId().equals(currentUser.getId());
         boolean isFollower = followService.isFollowing(currentUser, targetUser);
 
@@ -236,7 +236,7 @@ public class FinchService {
     @Transactional
     public FinchResponseDto replyToFinch(UUID parentId, CreateFinchRequestDto dto, UserDetails userDetails) {
         Finch parent = findFinchById(parentId);
-        User author = userService.findUserByUsername(userDetails.getUsername());
+        User author = userService.findUserByUsernameOrEmail(userDetails.getUsername());
         User parentOwner = parent.getUser();
 
         boolean isSelf = parentOwner.getId().equals(author.getId());
@@ -262,7 +262,7 @@ public class FinchService {
     @Transactional
     public FinchResponseDto quoteFinch(UUID quotedId, CreateFinchRequestDto dto, UserDetails userDetails) {
         Finch quoted = findFinchById(quotedId);
-        User author = userService.findUserByUsername(userDetails.getUsername());
+        User author = userService.findUserByUsernameOrEmail(userDetails.getUsername());
 
         if (quoted.getUser().isPrivate()
                 && !quoted.getUser().getId().equals(author.getId())

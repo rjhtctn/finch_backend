@@ -25,7 +25,7 @@ public class RefinchService {
 
     @Transactional
     public void repostFinch(java.util.UUID finchId, UserDetails userDetails) {
-        User user = userService.findUserByUsername(userDetails.getUsername());
+        User user = userService.findUserByUsernameOrEmail(userDetails.getUsername());
         Finch finch = finchService.findFinchById(finchId);
 
         if (finch.getUser().getId().equals(user.getId())) {
@@ -44,7 +44,7 @@ public class RefinchService {
 
     @Transactional
     public void removeRepost(java.util.UUID finchId, UserDetails userDetails) {
-        User user = userService.findUserByUsername(userDetails.getUsername());
+        User user = userService.findUserByUsernameOrEmail(userDetails.getUsername());
         Finch finch = finchService.findFinchById(finchId);
         ReFinch repost = refinchRepository.findByUserAndFinch(user, finch)
                 .orElseThrow(() -> new ResourceNotFoundException("Repost not found."));

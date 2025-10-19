@@ -4,6 +4,7 @@ import com.rjhtctn.finch_backend.model.User;
 import com.rjhtctn.finch_backend.model.ValidToken;
 import com.rjhtctn.finch_backend.repository.ValidTokenRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.Date;
 
@@ -16,10 +17,16 @@ public class ValidTokenService {
         this.validTokenRepository = validTokenRepository;
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void invalidateAllTokensForUser(User user) {
+        validTokenRepository.deleteAllByUser(user);
+        validTokenRepository.flush();
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void createTokenRecord(String jwtId, User user, Date createdAt, Date expiresAt) {
         ValidToken token = new ValidToken(jwtId, user, createdAt, expiresAt);
-        validTokenRepository.save(token);
+        validTokenRepository.saveAndFlush(token);
     }
 
     @Transactional(readOnly = true)
@@ -27,20 +34,15 @@ public class ValidTokenService {
         return validTokenRepository.findByJwtId(jwtId).isPresent();
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void invalidateToken(String jwtId) {
         validTokenRepository.findByJwtId(jwtId).ifPresent(validTokenRepository::delete);
+        validTokenRepository.flush();
     }
 
-    @Transactional
-    public void invalidateAllTokensForUser(User user) {
-        validTokenRepository.deleteAllByUser(user);
-    }
-
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void purgeExpiredTokens() {
-        int before = (int) validTokenRepository.count();
         validTokenRepository.deleteAllByExpiresAtBefore(new Date());
-        int after = (int) validTokenRepository.count();
+        validTokenRepository.flush();
     }
 }

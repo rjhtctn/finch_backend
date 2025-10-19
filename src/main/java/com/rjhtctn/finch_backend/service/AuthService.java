@@ -11,13 +11,11 @@ import com.rjhtctn.finch_backend.security.JwtService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.mail.MailException;
 import org.springframework.security.authentication.*;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Date;
 
 @Service
 public class AuthService {
@@ -29,7 +27,6 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final ValidTokenService validTokenService;
     private final UserService userService;
-    private final UserDetailsService userDetailsService;
 
     public AuthService(UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
@@ -37,8 +34,7 @@ public class AuthService {
                        JwtService jwtService,
                        AuthenticationManager authenticationManager,
                        ValidTokenService validTokenService,
-                       UserService userService,
-                       UserDetailsService userDetailsService) {
+                       UserService userService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.mailService = mailService;
@@ -46,7 +42,6 @@ public class AuthService {
         this.authenticationManager = authenticationManager;
         this.validTokenService = validTokenService;
         this.userService = userService;
-        this.userDetailsService = userDetailsService;
     }
 
     @Transactional
@@ -64,9 +59,15 @@ public class AuthService {
 
         userRepository.save(newUser);
 
-        String token = jwtService.generateVerificationToken(newUser);
-        newUser.setLatestVerificationJwt(token);
-        userRepository.save(newUser);
+        String token = jwtService.generateToken(newUser);
+        String jwtId = jwtService.extractId(token);
+        Date tokenIssuedAt = jwtService.extractIssuedAt(token);
+        Date tokenExpiration = jwtService.extractExpiration(token);
+
+        if (jwtId == null || jwtId.isBlank()) {
+            throw new IllegalStateException("JWT ID could not be extracted.");
+        }
+        validTokenService.createTokenRecord(jwtId,newUser,tokenIssuedAt,tokenExpiration);
 
         try {
             mailService.sendVerificationEmail(newUser, token);
@@ -80,28 +81,25 @@ public class AuthService {
     @Transactional
     public LoginResponseDto login(LoginRequestDto request) {
         try {
-            Authentication authentication = authenticationManager.authenticate(
+            authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
                             request.getLoginIdentifier(),
                             request.getPassword()
                     )
             );
 
-            org.springframework.security.core.userdetails.User principal =
-                    (org.springframework.security.core.userdetails.User) authentication.getPrincipal();
+            User user = userService.findUserByUsernameOrEmail(request.getLoginIdentifier());
 
-            User user = userService.findUserByUsernameOrEmail(principal.getUsername());
-
-            String token = jwtService.generateToken(principal);
+            String token = jwtService.generateToken(user);
             String jwtId = jwtService.extractId(token);
+            Date tokenIssuedAt = jwtService.extractIssuedAt(token);
+            Date tokenExpiration = jwtService.extractExpiration(token);
 
             if (jwtId == null || jwtId.isBlank()) {
                 throw new IllegalStateException("JWT ID could not be extracted.");
             }
 
-            validTokenService.createTokenRecord(jwtId, user,
-                    jwtService.extractIssuedAt(token),
-                    jwtService.extractExpiration(token));
+            validTokenService.createTokenRecord(jwtId, user,tokenIssuedAt,tokenExpiration);
 
             return new LoginResponseDto(token);
 
@@ -133,52 +131,53 @@ public class AuthService {
     @Transactional
     public void verifyAccount(String token) {
         String username = jwtService.extractUsername(token);
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found for verification token."));
+        User user = userService.findUserByUsernameOrEmail(username);
 
         if (user.isEnabled()) {
             throw new ConflictException("Account already verified.");
         }
 
-        if (!token.equals(user.getLatestVerificationJwt())) {
-            throw new ConflictException("Invalid or expired verification link.");
+        String jwtId = jwtService.extractId(token);
+
+        if(!validTokenService.isTokenValidInDatabase(jwtId)) {
+            throw new ConflictException("Invalid or expired verification token.");
         }
-
         user.setEnabled(true);
-        user.setLatestVerificationJwt(null);
+        validTokenService.invalidateAllTokensForUser(user);
         userRepository.save(user);
-
-    }
-
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void updateToken(User user, String token) {
-        user.setLatestVerificationJwt(token);
-        userRepository.saveAndFlush(user);
     }
 
     @Transactional
-    public void resendVerificationToken(String identifier) {
-        User user = userRepository.findByUsername(identifier)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found for verification token."));
+    public void resendVerificationToken(String email) {
+        User user = userService.findUserByUsernameOrEmail(email);
 
         if (user.isEnabled())
             throw new ConflictException("Account already verified.");
 
-        String token = jwtService.generateVerificationToken(user);
-        updateToken(user, token);
+        validTokenService.invalidateAllTokensForUser(user);
+
+        String token = jwtService.generateToken(user);
+        String jwtId = jwtService.extractId(token);
+        Date tokenIssuedAt = jwtService.extractIssuedAt(token);
+        Date tokenExpiration = jwtService.extractExpiration(token);
+
+        validTokenService.createTokenRecord(jwtId,user,tokenIssuedAt,tokenExpiration);
+
         mailService.sendVerificationEmail(user, token);
     }
 
     @Transactional
     public void requestPasswordReset(String email) {
         userRepository.findByUsernameOrEmail(email, email).ifPresent(user -> {
-            UserDetails userDetails = userDetailsService.loadUserByUsername(user.getUsername());
-            String token = jwtService.generateToken(userDetails);
 
             validTokenService.invalidateAllTokensForUser(user);
-            validTokenService.createTokenRecord(jwtService.extractId(token), user,
-                    jwtService.extractIssuedAt(token),
-                    jwtService.extractExpiration(token));
+
+            String token = jwtService.generateToken(user);
+            String jwtId = jwtService.extractId(token);
+            Date tokenIssuedAt = jwtService.extractIssuedAt(token);
+            Date tokenExpiration = jwtService.extractExpiration(token);
+
+            validTokenService.createTokenRecord(jwtId,user,tokenIssuedAt,tokenExpiration);
 
             try {
                 mailService.sendPasswordResetEmail(user, token);

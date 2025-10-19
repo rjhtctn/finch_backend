@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -124,24 +125,33 @@ public class UserService {
         }
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
-        userRepository.save(user);
         validTokenService.invalidateAllTokensForUser(user);
+        userRepository.save(user);
+        String token = jwtService.generateToken(user);
+        String jwtId = jwtService.extractId(token);
+        Date tokenIssuedAt = jwtService.extractIssuedAt(token);
+        Date tokenExpirationAt = jwtService.extractExpiration(token);
+        validTokenService.createTokenRecord(jwtId,user,tokenIssuedAt,tokenExpirationAt);
+        userRepository.save(user);
+        mailService.sendVerificationEmail(user, token);
     }
 
     @Transactional
-    public UserMeResponseDto changeEmail(UserDetails userDetails, ChangeEmailRequestDto request) {
+    public void changeEmail(UserDetails userDetails, ChangeEmailRequestDto request) {
         User user = findUserByUsernameOrEmail(userDetails.getUsername());
         if (Objects.equals(user.getEmail(), request.getEmail())) {
             throw new BadCredentialsException("This email address is already in use.");
         }
         user.setEmail(request.getEmail());
-        userRepository.save(user);
-        String token = jwtService.generateVerificationToken(user);
-        user.setLatestVerificationJwt(token);
-        userRepository.save(user);
-        mailService.sendVerificationEmail(user, token);
         validTokenService.invalidateAllTokensForUser(user);
-        return UserMapper.toUserMeResponse(user);
+        userRepository.save(user);
+        String token = jwtService.generateToken(user);
+        String jwtId = jwtService.extractId(token);
+        Date tokenIssuedAt = jwtService.extractIssuedAt(token);
+        Date tokenExpirationAt = jwtService.extractExpiration(token);
+        validTokenService.createTokenRecord(jwtId,user,tokenIssuedAt,tokenExpirationAt);
+        userRepository.save(user);
+        mailService.sendEmailChanged(user, token);
     }
 
     @Transactional

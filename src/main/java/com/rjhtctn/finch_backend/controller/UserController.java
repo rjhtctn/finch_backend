@@ -64,12 +64,11 @@ public class UserController {
     }
 
     @PutMapping("/me/email")
-    public ResponseEntity<UserMeResponseDto> updateUserProfileEmail(
+    public void updateUserProfileEmail(
             @RequestBody @Email ChangeEmailRequestDto request,
             @AuthenticationPrincipal UserDetails userDetails) {
 
-        UserMeResponseDto response = userService.changeEmail(userDetails, request);
-        return  ResponseEntity.ok(response);
+        userService.changeEmail(userDetails, request);
     }
 
     @DeleteMapping("/me")

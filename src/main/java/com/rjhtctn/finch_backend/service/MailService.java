@@ -35,6 +35,10 @@ public class MailService {
         sendTransactionalEmail(user, token, EmailType.PASSWORD_RESET);
     }
 
+    public void sendEmailChanged(User user, String token) {
+        sendTransactionalEmail(user, token, EmailType.EMAIL_CHANGE);
+    }
+
     private void sendTransactionalEmail(User user, String token, EmailType emailType) {
         try {
             String recipient = user.getEmail();
@@ -79,8 +83,13 @@ enum EmailType {
     PASSWORD_RESET("Finch - Şifrenizi Sıfırlayın",
             "Şifrenizi sıfırlamak için aşağıdaki bağlantıya tıklayın:",
             "Şifre Sıfırla",
-            "Bu bağlantı 10 saat geçerlidir.",
-            "/api/auth/reset-password");
+            "Bu bağlantı 24 saat geçerlidir.",
+            "/api/auth/reset-password"),
+    EMAIL_CHANGE("Finch - Yeni E-Posta Adresinizi Doğrulayın",
+            "Yeni E-Posta Adresinizi Doğrulamak için aşağıdaki bağlantıya tıklayın:",
+            "E-Posta Doğrula",
+            "Bu bağlantı 24 saat geçerlidir.",
+            "/api/auth/verify");
 
     final String subject;
     final String title;

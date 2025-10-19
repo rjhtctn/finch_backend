@@ -68,9 +68,6 @@ public class User {
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
-    @Column(length = 512)
-    private String latestVerificationJwt;
-
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Finch> finches = new ArrayList<>();
 

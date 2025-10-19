@@ -44,27 +44,17 @@ public class JwtService {
         return claimsResolver.apply(claims);
     }
 
-    public String generateToken(UserDetails userDetails) {
-        return generateToken(new HashMap<>(), userDetails);
+    public String generateToken(User user) {
+        return generateToken(new HashMap<>(), user);
     }
 
-    public String generateToken(Map<String, Object> extraClaims, UserDetails userDetails) {
+    public String generateToken(Map<String, Object> extraClaims, User user) {
         return Jwts.builder()
                 .claims(extraClaims)
-                .subject(userDetails.getUsername())
-                .id(UUID.randomUUID().toString())
-                .issuedAt(Date.from(Instant.now()))
-                .expiration(Date.from(Instant.now().plus(10, ChronoUnit.HOURS)))
-                .signWith(getSignInKey())
-                .compact();
-    }
-
-    public String generateVerificationToken(User user) {
-        return Jwts.builder()
                 .subject(user.getUsername())
                 .id(UUID.randomUUID().toString())
                 .issuedAt(Date.from(Instant.now()))
-                .expiration(Date.from(Instant.now().plus(24, ChronoUnit.HOURS)))
+                .expiration(Date.from(Instant.now().plus(10, ChronoUnit.HOURS)))
                 .signWith(getSignInKey())
                 .compact();
     }

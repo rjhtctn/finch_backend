@@ -2,6 +2,8 @@ package com.rjhtctn.finch_backend.repository;
 
 import com.rjhtctn.finch_backend.model.Finch;
 import com.rjhtctn.finch_backend.model.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -18,4 +20,6 @@ public interface FinchRepository extends JpaRepository<Finch, UUID> {
     List<Finch> findAllRootFinchesNative();
 
     List<Finch> findByUserInAndParentFinchIsNull(List<User> users, Sort sort);
+
+    Page<Finch> findByContentContainingIgnoreCase(String query, Pageable pageable);
 }

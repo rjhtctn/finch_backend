@@ -45,6 +45,9 @@ public class Finch {
     @OneToMany(mappedBy = "finch", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<Like> likes = new HashSet<>();
 
+    @OneToMany(mappedBy = "finch",  cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<Bookmark>  bookmarks = new HashSet<>();
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_id")
     private Finch parentFinch;

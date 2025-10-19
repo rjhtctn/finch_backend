@@ -31,19 +31,21 @@ public class FinchService {
     private final FollowService followService;
     private final RefinchService refinchService;
     private final ImageKitService imageKitService;
+    private final BookmarkService bookmarkService;
 
     public FinchService(FinchRepository finchRepository,
                         UserService userService,
                         @Lazy LikeService likeService,
                         FollowService followService,
                         @Lazy RefinchService refinchService,
-                        ImageKitService imageKitService) {
+                        ImageKitService imageKitService, BookmarkService bookmarkService) {
         this.finchRepository = finchRepository;
         this.userService = userService;
         this.likeService = likeService;
         this.followService = followService;
         this.refinchService = refinchService;
         this.imageKitService = imageKitService;
+        this.bookmarkService = bookmarkService;
     }
 
     @Transactional
@@ -295,6 +297,7 @@ public class FinchService {
         dto.setReplyCount(finch.getReplies() != null ? finch.getReplies().size() : 0);
         dto.setCurrentUserLiked(likeService.isLikedByUser(finch, currentUser));
         dto.setRepostCount(refinchService.getRepostCount(finch.getId()));
+        dto.setBookmarkCount(bookmarkService.getBookmarkCount(finch));
         return dto;
     }
 }

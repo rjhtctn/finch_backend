@@ -17,6 +17,7 @@ public class FinchResponseDto {
 
     private long likeCount;
     private int replyCount;
+    private long bookmarkCount;
 
     private List<FinchResponseDto> replies;
 

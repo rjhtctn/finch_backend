@@ -30,18 +30,18 @@ public class FinchController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<FinchResponseDto> createFinch(
             @ParameterObject @ModelAttribute @Valid CreateFinchRequestDto dto,
-            @RequestPart(value = "image", required = false) MultipartFile image,
+            @RequestPart(value = "image", required = false) List<MultipartFile> images,
             @AuthenticationPrincipal UserDetails userDetails) {
 
         boolean hasText = dto.getContent() != null && !dto.getContent().isBlank();
-        boolean hasImage = image != null && !image.isEmpty();
+        boolean hasImage = images != null && !images.isEmpty();
 
         if (!hasText && !hasImage) {
             return ResponseEntity.badRequest().build();
         }
 
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(finchService.createFinch(dto,image, userDetails));
+                .body(finchService.createFinch(dto,images, userDetails));
     }
 
     @GetMapping("/{finchId}")
@@ -52,12 +52,14 @@ public class FinchController {
         return ResponseEntity.ok(finchService.getFinchById(finchId, userDetails, depth));
     }
 
-    @PutMapping("/{finchId}")
+    @PutMapping(value = "/{finchId}", consumes = "multipart/form-data")
     public ResponseEntity<FinchResponseDto> updateFinch(
             @PathVariable UUID finchId,
-            @RequestBody @Valid UpdateFinchRequestDto dto,
-            @AuthenticationPrincipal UserDetails userDetails) {
-        return ResponseEntity.ok(finchService.updateFinch(finchId, dto, userDetails));
+            @ParameterObject @ModelAttribute @Valid UpdateFinchRequestDto dto,
+            @RequestPart(value = "newImages", required = false) List<MultipartFile> newImages,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        return ResponseEntity.ok(finchService.updateFinch(finchId, dto, newImages, userDetails));
     }
 
     @DeleteMapping("/{finchId}")

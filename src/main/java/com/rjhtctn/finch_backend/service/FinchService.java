@@ -9,6 +9,7 @@ import com.rjhtctn.finch_backend.exception.ResourceNotFoundException;
 import com.rjhtctn.finch_backend.mapper.FinchMapper;
 import com.rjhtctn.finch_backend.mapper.UserMapper;
 import com.rjhtctn.finch_backend.model.Finch;
+import com.rjhtctn.finch_backend.model.FinchImage;
 import com.rjhtctn.finch_backend.model.User;
 import com.rjhtctn.finch_backend.repository.FinchRepository;
 import org.springframework.context.annotation.Lazy;
@@ -18,8 +19,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -47,39 +47,116 @@ public class FinchService {
     }
 
     @Transactional
-    public FinchResponseDto createFinch(CreateFinchRequestDto dto, MultipartFile image, UserDetails userDetails) {
-        System.out.println("===> Finch create start. content: " + dto.getContent() + ", image: " + (image != null ? image.getOriginalFilename() : "null"));
+    public FinchResponseDto createFinch(CreateFinchRequestDto dto, List<MultipartFile> images, UserDetails userDetails) {
         User author = userService.findUserByUsername(userDetails.getUsername());
+
         Finch finch = new Finch();
         finch.setContent(dto.getContent());
         finch.setUser(author);
+        finch = finchRepository.save(finch);
 
-        if (image != null && !image.isEmpty()) {
-            System.out.println("===> Uploading image to ImageKit...");
-            String imageUrl = imageKitService.uploadImage(image, "finch/posts");
-            if (imageUrl.isEmpty() || imageUrl.equals("null")) {
-                throw new ConflictException("ImageKit returned null URL");
+        if (images != null && !images.isEmpty()) {
+            if (images.size() > 4)
+                throw new ConflictException("En fazla 4 fotoğraf yüklenebilir.");
+
+            for (MultipartFile image : images) {
+                if (image.isEmpty()) continue;
+
+                String folderPath = String.format("finch/%s/posts/%s", author.getUsername(), finch.getId());
+
+                String imageUrl = imageKitService.uploadImage(image, folderPath);
+
+                FinchImage img = new FinchImage();
+                img.setImageUrl(imageUrl);
+                img.setFileId(imageKitService.getLastFileId());
+                img.setFinch(finch);
+                finch.getImages().add(img);
             }
-            System.out.println("===> Uploaded image URL: " + imageUrl);
-            finch.setImageUrl(imageUrl);
+
+            finch = finchRepository.save(finch);
         }
 
-        Finch saved = finchRepository.save(finch);
-        return enrichCounters(FinchMapper.toFinchResponseWithoutReplies(saved), author);
+        return enrichCounters(FinchMapper.toFinchResponseWithoutReplies(finch), author);
     }
 
     @Transactional
-    public FinchResponseDto updateFinch(UUID finchId, UpdateFinchRequestDto dto, UserDetails userDetails) {
+    public FinchResponseDto updateFinch(UUID finchId,
+                                        UpdateFinchRequestDto dto,
+                                        List<MultipartFile> newImages,
+                                        UserDetails userDetails) {
         Finch finch = findOwnedFinch(finchId, userDetails);
-        finch.setContent(dto.getContent());
+        User author = userService.findUserByUsername(userDetails.getUsername());
+
+        Set<String> existingIds = finch.getImages() == null ? Set.of() :
+                finch.getImages().stream()
+                        .map(FinchImage::getFileId)
+                        .collect(Collectors.toSet());
+
+        Set<String> deleteIds = dto != null && dto.getDeleteImageIds() != null
+                ? dto.getDeleteImageIds().stream()
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .filter(existingIds::contains)
+                .collect(Collectors.toCollection(LinkedHashSet::new))
+                : Set.of();
+
+        int currentCount = existingIds.size();
+
+        int newCount = newImages == null ? 0 :
+                (int) newImages.stream().filter(f -> f != null && !f.isEmpty()).count();
+
+        int totalAfterUpdate = currentCount - deleteIds.size() + newCount;
+        if (totalAfterUpdate > 4) {
+            throw new ConflictException(String.format(
+                    "Toplam resim sayısı 4'ü geçemez. (Mevcut: %d, Silinecek: %d, Eklenecek: %d, Sonuç: %d)",
+                    currentCount, deleteIds.size(), newCount, totalAfterUpdate
+            ));
+        }
+
+        if (dto != null && dto.getContent() != null) {
+            finch.setContent(dto.getContent());
+        }
+
+        if (!deleteIds.isEmpty() && finch.getImages() != null) {
+            List<FinchImage> toDelete = finch.getImages().stream()
+                    .filter(img -> deleteIds.contains(img.getFileId()))
+                    .toList();
+
+            toDelete.forEach(img -> imageKitService.deleteImage(img.getFileId()));
+            finch.getImages().removeAll(toDelete);
+
+            if (finch.getImages().isEmpty()) {
+                String folderPath = String.format("finch/%s/posts/%s", author.getUsername(), finch.getId());
+                imageKitService.deleteFolder(folderPath);
+            }
+        }
+
+        if (newImages != null && !newImages.isEmpty()) {
+            String folderPath = String.format("finch/%s/posts/%s", author.getUsername(), finch.getId());
+            for (MultipartFile image : newImages) {
+                if (image == null || image.isEmpty()) continue;
+                String imageUrl = imageKitService.uploadImage(image, folderPath);
+
+                FinchImage img = new FinchImage();
+                img.setImageUrl(imageUrl);
+                img.setFileId(imageKitService.getLastFileId());
+                img.setFinch(finch);
+                finch.getImages().add(img);
+            }
+        }
+
         Finch updated = finchRepository.save(finch);
-        return enrichCounters(FinchMapper.toFinchResponseWithoutReplies(updated),
-                userService.findUserByUsername(userDetails.getUsername()));
+        return enrichCounters(FinchMapper.toFinchResponseWithoutReplies(updated), author);
     }
 
     @Transactional
     public void deleteFinch(UUID finchId, UserDetails userDetails) {
         Finch finch = findOwnedFinch(finchId, userDetails);
+
+        if (finch.getImages() != null && !finch.getImages().isEmpty()) {
+            imageKitService.deleteFolder("finch/" + finch.getUser().getUsername() + "/posts/" +  finch.getId());
+        }
         finchRepository.delete(finch);
     }
 

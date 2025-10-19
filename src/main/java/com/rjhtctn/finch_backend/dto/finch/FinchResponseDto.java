@@ -13,7 +13,7 @@ public class FinchResponseDto {
     private LocalDateTime createdAt;
     private UserResponseDto author;
 
-    private String imageUrl;
+    private List<ImageResponse> images;
 
     private long likeCount;
     private int replyCount;
@@ -28,4 +28,10 @@ public class FinchResponseDto {
     private boolean currentUserLiked;
 
     private String repostedBy;
+
+    @Data
+    public static class ImageResponse {
+        private String imageUrl;
+        private String fileId;
+    }
 }

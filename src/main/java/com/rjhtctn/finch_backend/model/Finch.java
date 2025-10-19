@@ -27,8 +27,8 @@ public class Finch {
     @Column(nullable = false, length = 280)
     private String content;
 
-    @Column(name = "image_url", nullable = true)
-    private String imageUrl;
+    @OneToMany(mappedBy = "finch", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<FinchImage> images =  new ArrayList<>();
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)

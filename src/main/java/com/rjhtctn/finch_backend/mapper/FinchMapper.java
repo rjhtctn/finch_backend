@@ -29,7 +29,16 @@ public class FinchMapper {
         dto.setContent(finch.getContent());
         dto.setCreatedAt(finch.getCreatedAt());
         dto.setAuthor(UserMapper.toUserResponse(finch.getUser()));
-        dto.setImageUrl(finch.getImageUrl());
+        if (finch.getImages() != null) {
+            dto.setImages(
+                    finch.getImages().stream().map(img -> {
+                        FinchResponseDto.ImageResponse imgDto = new FinchResponseDto.ImageResponse();
+                        imgDto.setImageUrl(img.getImageUrl());
+                        imgDto.setFileId(img.getFileId());
+                        return imgDto;
+                    }).collect(Collectors.toList())
+            );
+        }
         if (finch.getParentFinch() != null) {
             dto.setParentId(finch.getParentFinch().getId());
         }

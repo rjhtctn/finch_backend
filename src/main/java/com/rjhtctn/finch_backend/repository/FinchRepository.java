@@ -16,8 +16,7 @@ public interface FinchRepository extends JpaRepository<Finch, UUID> {
 
     List<Finch> findByUser_Username(String username, Sort sort);
 
-    @Query(value = "SELECT * FROM finch WHERE parent_id IS NULL ORDER BY created_at DESC", nativeQuery = true)
-    List<Finch> findAllRootFinchesNative();
+    List<Finch> findAllByParentFinchIsNullOrderByCreatedAtDesc();
 
     List<Finch> findByUserInAndParentFinchIsNull(List<User> users, Sort sort);
 

@@ -3,7 +3,6 @@ package com.rjhtctn.finch_backend.service;
 import com.rjhtctn.finch_backend.dto.auth.*;
 import com.rjhtctn.finch_backend.dto.user.UserResponseDto;
 import com.rjhtctn.finch_backend.exception.ConflictException;
-import com.rjhtctn.finch_backend.exception.ResourceNotFoundException;
 import com.rjhtctn.finch_backend.mapper.UserMapper;
 import com.rjhtctn.finch_backend.model.User;
 import com.rjhtctn.finch_backend.repository.UserRepository;
@@ -11,10 +10,12 @@ import com.rjhtctn.finch_backend.security.JwtService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.mail.MailException;
 import org.springframework.security.authentication.*;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import java.util.Date;
 
 @Service
@@ -57,23 +58,21 @@ public class AuthService {
         newUser.setLastName(request.getLastName());
         newUser.setPassword(passwordEncoder.encode(request.getPassword()));
 
-        userRepository.save(newUser);
+        userRepository.saveAndFlush(newUser);
 
-        String token = jwtService.generateToken(newUser);
-        String jwtId = jwtService.extractId(token);
-        Date tokenIssuedAt = jwtService.extractIssuedAt(token);
-        Date tokenExpiration = jwtService.extractExpiration(token);
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override public void afterCommit() {
+                String token = jwtService.generateToken(newUser);
+                String jwtId = jwtService.extractId(token);
+                Date issuedAt = jwtService.extractIssuedAt(token);
+                Date expiresAt = jwtService.extractExpiration(token);
 
-        if (jwtId == null || jwtId.isBlank()) {
-            throw new IllegalStateException("JWT ID could not be extracted.");
-        }
-        validTokenService.createTokenRecord(jwtId,newUser,tokenIssuedAt,tokenExpiration);
+                validTokenService.invalidateAllTokensForUser(newUser);
+                validTokenService.createTokenRecord(jwtId, newUser, issuedAt, expiresAt);
 
-        try {
-            mailService.sendVerificationEmail(newUser, token);
-        } catch (MailException e) {
-            userRepository.delete(newUser);
-        }
+                mailService.sendVerificationEmail(newUser, token);
+            }
+        });
 
         return UserMapper.toUserResponse(newUser);
     }
@@ -99,14 +98,15 @@ public class AuthService {
                 throw new IllegalStateException("JWT ID could not be extracted.");
             }
 
-            validTokenService.createTokenRecord(jwtId, user,tokenIssuedAt,tokenExpiration);
+            validTokenService.createTokenRecord(jwtId, user, tokenIssuedAt, tokenExpiration);
 
             return new LoginResponseDto(token);
 
         } catch (DisabledException e) {
             resendVerificationToken(request.getLoginIdentifier());
             throw new ConflictException("Account is not verified. A new verification email has been sent.");
-        } catch (BadCredentialsException e) {
+
+        } catch (AuthenticationException e) {
             throw new BadCredentialsException("Invalid username/email or password.");
         }
     }

@@ -53,7 +53,7 @@ public class FeedService {
                         author.getId().equals(currentUser.getId()) ||
                         followingIds.contains(author.getId());
 
-        List<Finch> finches = finchRepository.findAllRootFinchesNative()
+        List<Finch> finches = finchRepository.findAllByParentFinchIsNullOrderByCreatedAtDesc()
                 .stream()
                 .filter(finch -> canSeeContent.test(finch.getUser()))
                 .toList();

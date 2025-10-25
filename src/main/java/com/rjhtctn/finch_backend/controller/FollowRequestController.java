@@ -41,4 +41,11 @@ public class FollowRequestController {
         User receiver = userService.findUserByUsernameOrEmail(userDetails.getUsername());
         return ResponseEntity.ok(followRequestService.getPendingRequests(receiver));
     }
+
+    @GetMapping("/requests/accepted")
+    public ResponseEntity<List<FollowRequestResponseDto>> getAcceptedRequests(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User receiver = userService.findUserByUsernameOrEmail(userDetails.getUsername());
+        return ResponseEntity.ok(followRequestService.getAcceptedRequests(receiver));
+    }
 }

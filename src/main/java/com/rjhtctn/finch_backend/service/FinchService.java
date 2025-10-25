@@ -13,9 +13,6 @@ import com.rjhtctn.finch_backend.model.FinchImage;
 import com.rjhtctn.finch_backend.model.User;
 import com.rjhtctn.finch_backend.repository.FinchRepository;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -41,7 +38,8 @@ public class FinchService {
                         @Lazy LikeService likeService,
                         FollowService followService,
                         @Lazy RefinchService refinchService,
-                        ImageKitService imageKitService, BookmarkService bookmarkService) {
+                        ImageKitService imageKitService,
+                        BookmarkService bookmarkService) {
         this.finchRepository = finchRepository;
         this.userService = userService;
         this.likeService = likeService;

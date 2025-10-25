@@ -5,9 +5,12 @@ import com.rjhtctn.finch_backend.model.Finch;
 import com.rjhtctn.finch_backend.model.Like;
 import com.rjhtctn.finch_backend.model.User;
 import com.rjhtctn.finch_backend.repository.LikeRepository;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -22,7 +25,7 @@ public class LikeService {
 
     public LikeService(LikeRepository likeRepository,
                        UserService userService,
-                       FinchService finchService,
+                       @Lazy FinchService finchService,
                        FollowService followService) {
         this.likeRepository = likeRepository;
         this.userService = userService;
@@ -30,6 +33,7 @@ public class LikeService {
         this.followService = followService;
     }
 
+    @Transactional
     public void likeFinch(UUID finchId, UserDetails userDetails) {
         User user = userService.findUserByUsernameOrEmail(userDetails.getUsername());
         Finch finch = finchService.findFinchById(finchId);
@@ -51,6 +55,7 @@ public class LikeService {
         likeRepository.save(newLike);
     }
 
+    @Transactional
     public void unlikeFinch(UUID finchId, UserDetails userDetails) {
         User user = userService.findUserByUsernameOrEmail(userDetails.getUsername());
         Finch finch = finchService.findFinchById(finchId);

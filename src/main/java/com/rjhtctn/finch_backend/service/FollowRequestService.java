@@ -83,4 +83,12 @@ public class FollowRequestService {
                 .map(FollowRequestMapper::toDto)
                 .collect(Collectors.toList());
     }
+
+    @Transactional(readOnly = true)
+    public List<FollowRequestResponseDto> getAcceptedRequests(User receiver) {
+        return followRequestRepository.findByReceiverAndStatus(receiver, FollowRequest.Status.ACCEPTED)
+                .stream()
+                .map(FollowRequestMapper::toDto)
+                .toList();
+    }
 }

@@ -1,10 +1,14 @@
 package com.rjhtctn.finch_backend.controller;
 
+import com.rjhtctn.finch_backend.model.ReFinch;
 import com.rjhtctn.finch_backend.service.RefinchService;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -29,5 +33,10 @@ public class RefinchController {
                                                @AuthenticationPrincipal UserDetails userDetails) {
         refinchService.removeRepost(finchId, userDetails);
         return ResponseEntity.ok("Repost removed.");
+    }
+
+    @GetMapping
+    public List<ReFinch> getAllRepostByUser(@NotNull @AuthenticationPrincipal UserDetails userDetails) {
+        return (refinchService.getAllRepostsByUser(userDetails.getUsername()));
     }
 }

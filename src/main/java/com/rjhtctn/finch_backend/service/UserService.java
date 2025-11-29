@@ -9,16 +9,12 @@ import com.rjhtctn.finch_backend.model.User;
 import com.rjhtctn.finch_backend.repository.UserRepository;
 import com.rjhtctn.finch_backend.security.JwtService;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
@@ -91,31 +87,26 @@ public class UserService {
 
     @Transactional
     public UserMeResponseDto updateProfileImage(UserDetails userDetails, MultipartFile file) {
-        User user = findUserByUsernameOrEmail(userDetails.getUsername());
-        if (file.isEmpty()) {
-            throw new BadCredentialsException("Invalid data provided");
-        }
-
-        String folderPath = String.format("finch/%s/%s", user.getUsername(), "ProfileImages");
-
-        String imageUrl = imageKitService.uploadImage(file, folderPath);
-
-        user.setProfileImageUrl(imageUrl);
-        userRepository.save(user);
-
-        return UserMapper.toUserMeResponse(user);
+        return uploadUserImage(userDetails, file, "ProfileImages", User::setProfileImageUrl);
     }
 
     @Transactional
     public UserMeResponseDto updateBannerImage(UserDetails userDetails, MultipartFile file) {
+        return uploadUserImage(userDetails, file, "BannerImages", User::setBannerImageUrl);
+    }
+
+    private UserMeResponseDto uploadUserImage(UserDetails userDetails, MultipartFile file, String folderName, java.util.function.BiConsumer<User, String> imageSetter) {
         User user = findUserByUsernameOrEmail(userDetails.getUsername());
         if (file.isEmpty()) {
             throw new BadCredentialsException("Invalid data provided");
         }
-        String folderPath = String.format("finch/%s/%s", user.getUsername(), "BannerImages");
+
+        String folderPath = String.format("finch/%s/%s", user.getUsername(), folderName);
         String imageUrl = imageKitService.uploadImage(file, folderPath);
-        user.setBannerImageUrl(imageUrl);
+
+        imageSetter.accept(user, imageUrl);
         userRepository.save(user);
+
         return UserMapper.toUserMeResponse(user);
     }
 

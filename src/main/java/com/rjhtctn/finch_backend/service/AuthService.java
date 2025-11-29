@@ -62,13 +62,7 @@ public class AuthService {
 
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override public void afterCommit() {
-                String token = jwtService.generateToken(newUser);
-                String jwtId = jwtService.extractId(token);
-                Date issuedAt = jwtService.extractIssuedAt(token);
-                Date expiresAt = jwtService.extractExpiration(token);
-
-                validTokenService.invalidateAllTokensForUser(newUser);
-                validTokenService.createTokenRecord(jwtId, newUser, issuedAt, expiresAt);
+                String token = generateAndSaveToken(newUser);
 
                 mailService.sendVerificationEmail(newUser, token);
             }
@@ -89,16 +83,7 @@ public class AuthService {
 
             User user = userService.findUserByUsernameOrEmail(request.getLoginIdentifier());
 
-            String token = jwtService.generateToken(user);
-            String jwtId = jwtService.extractId(token);
-            Date tokenIssuedAt = jwtService.extractIssuedAt(token);
-            Date tokenExpiration = jwtService.extractExpiration(token);
-
-            if (jwtId == null || jwtId.isBlank()) {
-                throw new IllegalStateException("JWT ID could not be extracted.");
-            }
-
-            validTokenService.createTokenRecord(jwtId, user, tokenIssuedAt, tokenExpiration);
+            String token = generateAndSaveToken(user);
 
             return new LoginResponseDto(token);
 
@@ -156,12 +141,7 @@ public class AuthService {
 
         validTokenService.invalidateAllTokensForUser(user);
 
-        String token = jwtService.generateToken(user);
-        String jwtId = jwtService.extractId(token);
-        Date tokenIssuedAt = jwtService.extractIssuedAt(token);
-        Date tokenExpiration = jwtService.extractExpiration(token);
-
-        validTokenService.createTokenRecord(jwtId,user,tokenIssuedAt,tokenExpiration);
+        String token = generateAndSaveToken(user);
 
         mailService.sendVerificationEmail(user, token);
     }
@@ -172,12 +152,7 @@ public class AuthService {
 
             validTokenService.invalidateAllTokensForUser(user);
 
-            String token = jwtService.generateToken(user);
-            String jwtId = jwtService.extractId(token);
-            Date tokenIssuedAt = jwtService.extractIssuedAt(token);
-            Date tokenExpiration = jwtService.extractExpiration(token);
-
-            validTokenService.createTokenRecord(jwtId,user,tokenIssuedAt,tokenExpiration);
+            String token = generateAndSaveToken(user);
 
             try {
                 mailService.sendPasswordResetEmail(user, token);
@@ -201,5 +176,19 @@ public class AuthService {
         userRepository.save(user);
 
         validTokenService.invalidateAllTokensForUser(user);
+    }
+
+    private String generateAndSaveToken(User user) {
+        String token = jwtService.generateToken(user);
+        String jwtId = jwtService.extractId(token);
+        Date tokenIssuedAt = jwtService.extractIssuedAt(token);
+        Date tokenExpiration = jwtService.extractExpiration(token);
+
+        if (jwtId == null || jwtId.isBlank()) {
+            throw new IllegalStateException("JWT ID could not be extracted.");
+        }
+
+        validTokenService.createTokenRecord(jwtId, user, tokenIssuedAt, tokenExpiration);
+        return token;
     }
 }

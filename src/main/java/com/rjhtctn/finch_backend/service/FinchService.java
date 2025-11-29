@@ -25,6 +25,8 @@ import java.util.stream.Collectors;
 @Service
 public class FinchService {
 
+    private static final int MAX_IMAGE_COUNT = 4;
+
     private final FinchRepository finchRepository;
     private final UserService userService;
     private final LikeService likeService;
@@ -58,26 +60,7 @@ public class FinchService {
         finch.setUser(author);
         finch = finchRepository.save(finch);
 
-        if (images != null && !images.isEmpty()) {
-            if (images.size() > 4)
-                throw new ConflictException("En fazla 4 fotoğraf yüklenebilir.");
-
-            for (MultipartFile image : images) {
-                if (image.isEmpty()) continue;
-
-                String folderPath = String.format("finch/%s/posts/%s", author.getUsername(), finch.getId());
-
-                String imageUrl = imageKitService.uploadImage(image, folderPath);
-
-                FinchImage img = new FinchImage();
-                img.setImageUrl(imageUrl);
-                img.setFileId(imageKitService.getLastFileId());
-                img.setFinch(finch);
-                finch.getImages().add(img);
-            }
-
-            finch = finchRepository.save(finch);
-        }
+        processImages(images, finch, author);
 
         return enrichCounters(FinchMapper.toFinchResponseWithoutReplies(finch), author);
     }
@@ -110,7 +93,7 @@ public class FinchService {
                 (int) newImages.stream().filter(f -> f != null && !f.isEmpty()).count();
 
         int totalAfterUpdate = currentCount - deleteIds.size() + newCount;
-        if (totalAfterUpdate > 4) {
+        if (totalAfterUpdate > MAX_IMAGE_COUNT) {
             throw new ConflictException(String.format(
                     "Toplam resim sayısı 4'ü geçemez. (Mevcut: %d, Silinecek: %d, Eklenecek: %d, Sonuç: %d)",
                     currentCount, deleteIds.size(), newCount, totalAfterUpdate
@@ -136,17 +119,7 @@ public class FinchService {
         }
 
         if (newImages != null && !newImages.isEmpty()) {
-            String folderPath = String.format("finch/%s/posts/%s", author.getUsername(), finch.getId());
-            for (MultipartFile image : newImages) {
-                if (image == null || image.isEmpty()) continue;
-                String imageUrl = imageKitService.uploadImage(image, folderPath);
-
-                FinchImage img = new FinchImage();
-                img.setImageUrl(imageUrl);
-                img.setFileId(imageKitService.getLastFileId());
-                img.setFinch(finch);
-                finch.getImages().add(img);
-            }
+            processImages(newImages, finch, author);
         }
 
         Finch updated = finchRepository.save(finch);
@@ -260,26 +233,7 @@ public class FinchService {
 
         Finch saved = finchRepository.save(reply);
 
-        if (images != null && !images.isEmpty()) {
-            if (images.size() > 4)
-                throw new ConflictException("En fazla 4 fotoğraf yüklenebilir.");
-
-            for (MultipartFile image : images) {
-                if (image.isEmpty()) continue;
-
-                String folderPath = String.format("finch/%s/posts/%s", author.getUsername(), reply.getId());
-
-                String imageUrl = imageKitService.uploadImage(image, folderPath);
-
-                FinchImage img = new FinchImage();
-                img.setImageUrl(imageUrl);
-                img.setFileId(imageKitService.getLastFileId());
-                img.setFinch(reply);
-                reply.getImages().add(img);
-            }
-
-            saved = finchRepository.save(reply);
-        }
+        processImages(images, saved, author);
 
         return enrichCounters(FinchMapper.toFinchResponseWithoutReplies(saved), author);
     }
@@ -302,26 +256,7 @@ public class FinchService {
 
         Finch saved = finchRepository.save(quote);
 
-        if (images != null && !images.isEmpty()) {
-            if (images.size() > 4)
-                throw new ConflictException("En fazla 4 fotoğraf yüklenebilir.");
-
-            for (MultipartFile image : images) {
-                if (image.isEmpty()) continue;
-
-                String folderPath = String.format("finch/%s/posts/%s", author.getUsername(), quote.getId());
-
-                String imageUrl = imageKitService.uploadImage(image, folderPath);
-
-                FinchImage img = new FinchImage();
-                img.setImageUrl(imageUrl);
-                img.setFileId(imageKitService.getLastFileId());
-                img.setFinch(quote);
-                quote.getImages().add(img);
-            }
-
-            saved = finchRepository.save(quote);
-        }
+        processImages(images, saved, author);
 
         return enrichCounters(FinchMapper.toFinchResponseWithoutReplies(saved), author);
     }
@@ -344,5 +279,27 @@ public class FinchService {
         dto.setRepostCount(refinchService.getRepostCount(finch.getId()));
         dto.setBookmarkCount(bookmarkService.getBookmarkCount(finch));
         return dto;
+    }
+
+    private void processImages(List<MultipartFile> images, Finch finch, User author) {
+        if (images == null || images.isEmpty()) return;
+
+        if (finch.getImages().size() + images.size() > MAX_IMAGE_COUNT) {
+             throw new ConflictException("En fazla " + MAX_IMAGE_COUNT + " fotoğraf yüklenebilir.");
+        }
+
+        for (MultipartFile image : images) {
+            if (image == null || image.isEmpty()) continue;
+
+            String folderPath = String.format("finch/%s/posts/%s", author.getUsername(), finch.getId());
+            String imageUrl = imageKitService.uploadImage(image, folderPath);
+
+            FinchImage img = new FinchImage();
+            img.setImageUrl(imageUrl);
+            img.setFileId(imageKitService.getLastFileId());
+            img.setFinch(finch);
+            finch.getImages().add(img);
+        }
+        finchRepository.save(finch);
     }
 }

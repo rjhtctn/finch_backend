@@ -73,7 +73,7 @@ public class FinchController {
     @PostMapping(value = "/{parentId}/reply", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<FinchResponseDto> replyToFinch(
             @PathVariable UUID parentId,
-            @RequestBody @Valid CreateFinchRequestDto dto,
+            @ParameterObject @ModelAttribute @Valid CreateFinchRequestDto dto,
             @RequestPart(value = "image", required = false) List<MultipartFile> images,
             @AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(finchService.replyToFinch(parentId, dto, images, userDetails));
@@ -82,7 +82,7 @@ public class FinchController {
     @PostMapping(value = "/{finchId}/quote", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<FinchResponseDto> quoteFinch(
             @PathVariable UUID finchId,
-            @RequestBody @Valid CreateFinchRequestDto dto,
+            @ParameterObject @ModelAttribute @Valid CreateFinchRequestDto dto,
             @RequestPart(value = "image", required = false) List<MultipartFile> images,
             @AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(finchService.quoteFinch(finchId, dto, images, userDetails));

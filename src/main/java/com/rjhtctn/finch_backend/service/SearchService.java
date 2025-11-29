@@ -10,7 +10,9 @@ import com.rjhtctn.finch_backend.model.User;
 import com.rjhtctn.finch_backend.repository.FinchRepository;
 import com.rjhtctn.finch_backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +29,7 @@ public class SearchService {
     private final LikeService likeService;
     private final RefinchService refinchService;
     private final UserService userService;
+    private final BookmarkService bookmarkService;
 
     @Transactional(readOnly = true)
     public Page<UserResponseDto> searchUsers(String query, UserDetails userDetails, Pageable pageable) {
@@ -68,6 +71,9 @@ public class SearchService {
                     dto.setReplyCount(f.getReplies() != null ? f.getReplies().size() : 0);
                     dto.setRepostCount(refinchService.getRepostCount(f.getId()));
                     dto.setCurrentUserLiked(likeService.isLikedByUser(f, currentUser));
+                    dto.setCurrentUserReposted(refinchService.isRepostedByUser(currentUser, f));
+                    dto.setCurrentUserBookmarked(bookmarkService.isBookmarkedByUser(currentUser, f));
+                    dto.setBookmarkCount(bookmarkService.getBookmarkCount(f));
                     return dto;
                 })
                 .collect(Collectors.toList());

@@ -24,6 +24,7 @@ public class FeedService {
     private final LikeService likeService;
     private final FollowService followService;
     private final BookmarkService bookmarkService;
+    private final RefinchService refinchService;
 
     public FeedService(
             FinchRepository finchRepository,
@@ -31,13 +32,15 @@ public class FeedService {
             UserService userService,
             LikeService likeService,
             FollowService followService,
-            BookmarkService bookmarkService) {
+            BookmarkService bookmarkService,
+            RefinchService refinchService) {
         this.finchRepository = finchRepository;
         this.refinchRepository = refinchRepository;
         this.userService = userService;
         this.likeService = likeService;
         this.followService = followService;
         this.bookmarkService = bookmarkService;
+        this.refinchService = refinchService;
     }
 
     @Transactional(readOnly = true)
@@ -103,7 +106,10 @@ public class FeedService {
         dto.setLikeCount(likeService.getLikeCountForFinch(finch));
         dto.setReplyCount(finch.getReplies() != null ? finch.getReplies().size() : 0);
         dto.setCurrentUserLiked(likeService.isLikedByUser(finch, currentUser));
+        dto.setCurrentUserReposted(refinchService.isRepostedByUser(currentUser, finch));
+        dto.setCurrentUserBookmarked(bookmarkService.isBookmarkedByUser(currentUser, finch));
         dto.setBookmarkCount(bookmarkService.getBookmarkCount(finch));
+        dto.setRepostCount(refinchService.getRepostCount(finch.getId()));
         return dto;
     }
 

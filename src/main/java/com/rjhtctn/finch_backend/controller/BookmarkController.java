@@ -4,6 +4,15 @@ import com.rjhtctn.finch_backend.model.Bookmark;
 import com.rjhtctn.finch_backend.service.BookmarkService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+package com.rjhtctn.finch_backend.controller;
+
+import com.rjhtctn.finch_backend.model.Bookmark;
+import com.rjhtctn.finch_backend.service.BookmarkService;
+import com.rjhtctn.finch_backend.dto.finch.FinchResponseDto;
+import com.rjhtctn.finch_backend.service.FinchService;
+import com.rjhtctn.finch_backend.service.UserService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -15,6 +24,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class BookmarkController {
     private final BookmarkService bookmarkService;
+    private final com.rjhtctn.finch_backend.service.FinchService finchService;
+    private final com.rjhtctn.finch_backend.service.UserService userService;
 
     @PostMapping("/{finchId}/toggle")
     public ResponseEntity<Void> toggleBookmark(
@@ -25,8 +36,9 @@ public class BookmarkController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Bookmark>> getBookmarks(
+    public ResponseEntity<List<com.rjhtctn.finch_backend.dto.finch.FinchResponseDto>> getBookmarks(
             @AuthenticationPrincipal UserDetails userDetails) {
-        return ResponseEntity.ok(bookmarkService.getUserBookmarks(userDetails.getUsername()));
+        var user = userService.findUserByUsernameOrEmail(userDetails.getUsername());
+        return ResponseEntity.ok(finchService.getBookmarkedFinchesByUser(user));
     }
 }

@@ -27,6 +27,8 @@ public class FinchResponseDto {
     private UUID parentId;
 
     private boolean currentUserLiked;
+    private boolean currentUserReposted;
+    private boolean currentUserBookmarked;
 
     private String repostedBy;
 

@@ -37,4 +37,8 @@ public class BookmarkService {
     public long getBookmarkCount(Finch finch) {
         return bookmarkRepository.countByFinch(finch);
     }
+
+    public boolean isBookmarkedByUser(User user, Finch finch) {
+        return bookmarkRepository.findByUserAndFinch(user, finch).isPresent();
+    }
 }

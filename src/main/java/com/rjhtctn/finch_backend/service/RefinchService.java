@@ -57,4 +57,9 @@ public class RefinchService {
     public boolean isRepost(Finch finch) {
         return refinchRepository.existsByFinch(finch);
     }
+
+    @Transactional(readOnly = true)
+    public boolean isRepostedByUser(User user, Finch finch) {
+        return refinchRepository.existsByUserAndFinch(user, finch);
+    }
 }

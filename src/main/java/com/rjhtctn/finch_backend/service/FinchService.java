@@ -301,6 +301,28 @@ public class FinchService {
         quote.setQuotedFinch(quoted);
 
         Finch saved = finchRepository.save(quote);
+
+        if (images != null && !images.isEmpty()) {
+            if (images.size() > 4)
+                throw new ConflictException("En fazla 4 fotoğraf yüklenebilir.");
+
+            for (MultipartFile image : images) {
+                if (image.isEmpty()) continue;
+
+                String folderPath = String.format("finch/%s/posts/%s", author.getUsername(), quote.getId());
+
+                String imageUrl = imageKitService.uploadImage(image, folderPath);
+
+                FinchImage img = new FinchImage();
+                img.setImageUrl(imageUrl);
+                img.setFileId(imageKitService.getLastFileId());
+                img.setFinch(quote);
+                quote.getImages().add(img);
+            }
+
+            saved = finchRepository.save(quote);
+        }
+
         return enrichCounters(FinchMapper.toFinchResponseWithoutReplies(saved), author);
     }
 

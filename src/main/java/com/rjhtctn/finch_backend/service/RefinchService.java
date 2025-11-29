@@ -28,10 +28,6 @@ public class RefinchService {
         User user = userService.findUserByUsernameOrEmail(userDetails.getUsername());
         Finch finch = finchService.findFinchById(finchId);
 
-        if (finch.getUser().getId().equals(user.getId())) {
-            throw new ConflictException("You cannot repost your own Finch.");
-        }
-
         if (refinchRepository.existsByUserAndFinch(user, finch)) {
             throw new ConflictException("You have already reposted this Finch.");
         }

@@ -237,7 +237,7 @@ public class FinchService {
     }
 
     @Transactional
-    public FinchResponseDto replyToFinch(UUID parentId, CreateFinchRequestDto dto, UserDetails userDetails) {
+    public FinchResponseDto replyToFinch(UUID parentId, CreateFinchRequestDto dto, List<MultipartFile> images, UserDetails userDetails) {
         Finch parent = findFinchById(parentId);
         User author = userService.findUserByUsernameOrEmail(userDetails.getUsername());
         User parentOwner = parent.getUser();
@@ -259,11 +259,33 @@ public class FinchService {
         reply.setParentFinch(parent);
 
         Finch saved = finchRepository.save(reply);
+
+        if (images != null && !images.isEmpty()) {
+            if (images.size() > 4)
+                throw new ConflictException("En fazla 4 fotoğraf yüklenebilir.");
+
+            for (MultipartFile image : images) {
+                if (image.isEmpty()) continue;
+
+                String folderPath = String.format("finch/%s/posts/%s", author.getUsername(), reply.getId());
+
+                String imageUrl = imageKitService.uploadImage(image, folderPath);
+
+                FinchImage img = new FinchImage();
+                img.setImageUrl(imageUrl);
+                img.setFileId(imageKitService.getLastFileId());
+                img.setFinch(reply);
+                reply.getImages().add(img);
+            }
+
+            saved = finchRepository.save(reply);
+        }
+
         return enrichCounters(FinchMapper.toFinchResponseWithoutReplies(saved), author);
     }
 
     @Transactional
-    public FinchResponseDto quoteFinch(UUID quotedId, CreateFinchRequestDto dto, UserDetails userDetails) {
+    public FinchResponseDto quoteFinch(UUID quotedId, CreateFinchRequestDto dto, List<MultipartFile> images, UserDetails userDetails) {
         Finch quoted = findFinchById(quotedId);
         User author = userService.findUserByUsernameOrEmail(userDetails.getUsername());
 

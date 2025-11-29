@@ -70,20 +70,22 @@ public class FinchController {
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/{parentId}/reply")
+    @PostMapping(value = "/{parentId}/reply", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<FinchResponseDto> replyToFinch(
             @PathVariable UUID parentId,
             @RequestBody @Valid CreateFinchRequestDto dto,
+            @RequestPart(value = "image", required = false) List<MultipartFile> images,
             @AuthenticationPrincipal UserDetails userDetails) {
-        return ResponseEntity.ok(finchService.replyToFinch(parentId, dto, userDetails));
+        return ResponseEntity.ok(finchService.replyToFinch(parentId, dto, images, userDetails));
     }
 
-    @PostMapping("/{finchId}/quote")
+    @PostMapping(value = "/{finchId}/quote", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<FinchResponseDto> quoteFinch(
             @PathVariable UUID finchId,
             @RequestBody @Valid CreateFinchRequestDto dto,
+            @RequestPart(value = "image", required = false) List<MultipartFile> images,
             @AuthenticationPrincipal UserDetails userDetails) {
-        return ResponseEntity.ok(finchService.quoteFinch(finchId, dto, userDetails));
+        return ResponseEntity.ok(finchService.quoteFinch(finchId, dto, images, userDetails));
     }
 
     @GetMapping("/{finchId}/likes")

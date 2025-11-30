@@ -8,6 +8,8 @@ import com.rjhtctn.finch_backend.model.User;
 import com.rjhtctn.finch_backend.repository.UserRepository;
 import com.rjhtctn.finch_backend.security.JwtService;
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.mail.MailException;
 import org.springframework.security.authentication.*;
 import org.springframework.security.core.AuthenticationException;
@@ -20,6 +22,8 @@ import java.util.Date;
 
 @Service
 public class AuthService {
+
+    private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -64,7 +68,11 @@ public class AuthService {
             @Override public void afterCommit() {
                 String token = generateAndSaveToken(newUser);
 
-                mailService.sendVerificationEmail(newUser, token);
+                try {
+                    mailService.sendVerificationEmail(newUser, token);
+                } catch (Exception e) {
+                    logger.error("Failed to send verification email to user: {}", newUser.getEmail(), e);
+                }
             }
         });
 
